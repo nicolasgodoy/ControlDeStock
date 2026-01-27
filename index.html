@@ -221,9 +221,10 @@
                                     <th>Fecha</th>
                                     <th>Producto</th>
                                     <th>Talla</th>
+                                    <th>Cliente</th>
                                     <th>Cant.</th>
-                                    <th>Precio</th>
                                     <th>Total</th>
+                                    <th>Estado</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -366,6 +367,17 @@
                 <div id="saleItemInfo"
                     style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                     <!-- Info del item inyectada por JS -->
+                </div>
+                <div class="form-group">
+                    <label for="saleCustomer">Nombre del Cliente:</label>
+                    <input type="text" id="saleCustomer" class="input-hours" placeholder="Nombre completo">
+                </div>
+                <div class="form-group">
+                    <label for="saleStatus">Estado del Pago:</label>
+                    <select id="saleStatus" class="input-hours">
+                        <option value="pagado">Pagado (Contado)</option>
+                        <option value="deuda" style="color: #ff3366;">Deuda (Pendiente)</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="saleQuantity">Cantidad a vender:</label>

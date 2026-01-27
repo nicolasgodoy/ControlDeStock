@@ -52,6 +52,8 @@ class UIController {
         this.btnConfirmOk = document.getElementById('btnConfirmOk');
         this.btnConfirmCancel = document.getElementById('btnConfirmCancel');
         this.saleQuantityInput = document.getElementById('saleQuantity');
+        this.saleCustomerInput = document.getElementById('saleCustomer');
+        this.saleStatusInput = document.getElementById('saleStatus');
         this.saleItemInfo = document.getElementById('saleItemInfo');
         this.btnConfirmSale = document.getElementById('btnConfirmSale');
 
@@ -225,6 +227,9 @@ class UIController {
         const formattedDate = date.toLocaleDateString();
         const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+        const statusClass = sale.estado === 'pagado' ? 'status-paid' : 'status-debt';
+        const statusText = sale.estado === 'pagado' ? 'PAGADO' : 'DEUDA';
+
         return `
             <tr>
                 <td>
@@ -233,26 +238,44 @@ class UIController {
                 </td>
                 <td>${sale.producto}</td>
                 <td><span class="info-value" style="font-size: 12px;">${sale.talla}</span></td>
+                <td><div style="font-size: 13px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sale.cliente}">${sale.cliente}</div></td>
                 <td>${sale.cantidad}</td>
-                <td>$${sale.precioUnitario.toFixed(2)}</td>
                 <td style="color: #20e2d7; font-weight: bold;">$${sale.totalVenta.toFixed(2)}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 <td>
-                    <button class="btn-trash" data-delete-sale="${sale.id}" title="Anular venta">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                    </button>
+                    <div style="display: flex; gap: 5px;">
+                        ${sale.estado === 'deuda' ? `
+                            <button class="btn-trash" style="color: #43e97b;" data-pay-sale="${sale.id}" title="Marcar como pagado">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            </button>
+                        ` : ''}
+                        <button class="btn-trash" data-delete-sale="${sale.id}" title="Anular venta">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
     }
 
     renderSalesPagination(totalSales) {
-        // Asignar listeners de borrado de venta SIEMPRE, incluso si no hay paginación
+        // Limpiar y Reasignar Listeners borrar venta
         const deleteBtns = this.salesTableBody.querySelectorAll('[data-delete-sale]');
         deleteBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const saleId = btn.getAttribute('data-delete-sale');
                 this.handleDeleteSale(saleId);
+            });
+        });
+
+        // Listeners Marcar como pagado
+        const payBtns = this.salesTableBody.querySelectorAll('[data-pay-sale]');
+        payBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const saleId = btn.getAttribute('data-pay-sale');
+                this.handleMarkAsPaid(saleId);
             });
         });
 
@@ -293,6 +316,8 @@ class UIController {
 
         // Reset and Clear Modal
         this.saleQuantityInput.value = 1;
+        this.saleCustomerInput.value = "";
+        this.saleStatusInput.value = "pagado";
         document.getElementById('saleError').style.display = 'none';
         this.saleItemInfo.innerHTML = `
             <div style="font-weight: bold; font-size: 16px;">${item.tipo}</div>
@@ -311,6 +336,8 @@ class UIController {
 
         this.btnConfirmSale.addEventListener('click', async () => {
             const qty = parseInt(this.saleQuantityInput.value);
+            const cliente = this.saleCustomerInput.value.trim();
+            const estado = this.saleStatusInput.value;
             const errorDiv = document.getElementById('saleError');
 
             if (isNaN(qty) || qty <= 0) {
@@ -325,7 +352,7 @@ class UIController {
                 return;
             }
 
-            const result = await dataManager.registerSale(id, qty);
+            const result = await dataManager.registerSale(id, qty, cliente, estado);
             if (result.success) {
                 this.showNotification(`Venta registrada: ${qty} x ${item.tipo}`);
                 this.closeSaleModal();
@@ -338,6 +365,24 @@ class UIController {
 
     closeSaleModal() {
         this.saleModal.style.display = 'none';
+    }
+
+    async handleMarkAsPaid(saleId) {
+        const sale = dataManager.dataCache.sales.find(s => s.id === saleId);
+        if (!sale) return;
+
+        this.showConfirm(
+            "Confirmar Pago",
+            `¿Deseas marcar la venta de <b>${sale.producto}</b> a favor de <b>${sale.cliente}</b> como PAGADA?`,
+            async () => {
+                const result = await dataManager.updateSaleStatus(saleId, 'pagado');
+                if (result.success) {
+                    this.showNotification('Estado actualizado a PAGADO');
+                } else {
+                    alert('Error al actualizar estado');
+                }
+            }
+        );
     }
 
     async handleDeleteSale(id) {

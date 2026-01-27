@@ -223,7 +223,7 @@ class DataManager {
         return [];
     }
 
-    async registerSale(itemId, quantity) {
+    async registerSale(itemId, quantity, cliente = "Consumidor Final", estado = "pagado") {
         const itemIndex = this.dataCache.inventory.findIndex(i => i.id === itemId);
         if (itemIndex === -1) return { success: false, message: "Producto no encontrado" };
 
@@ -247,7 +247,9 @@ class DataManager {
             precioUnitario: item.precio,
             totalVenta: item.precio * quantity,
             fecha: new Date().toISOString(),
-            vendedor: this.currentUser
+            vendedor: this.currentUser,
+            cliente: cliente || "Consumidor Final",
+            estado: estado // 'pagado' o 'deuda'
         };
 
         if (!this.dataCache.sales) this.dataCache.sales = [];
@@ -258,6 +260,20 @@ class DataManager {
         return { success: saved, sale: newSale };
     }
 
+    async updateSaleStatus(saleId, newStatus) {
+        if (!this.dataCache.sales) return { success: false, message: "No hay ventas registradas" };
+
+        const saleIndex = this.dataCache.sales.findIndex(s => s.id === saleId);
+        if (saleIndex === -1) return { success: false, message: "Venta no encontrada" };
+
+        this.dataCache.sales[saleIndex].estado = newStatus;
+        if (newStatus === 'pagado') {
+            this.dataCache.sales[saleIndex].fechaPago = new Date().toISOString();
+        }
+
+        const saved = await this.saveAllData();
+        return { success: saved };
+    }
     async deleteSale(saleId, restoreStock = true) {
         const saleIndex = this.dataCache.sales.findIndex(s => s.id === saleId);
         if (saleIndex === -1) return { success: false, message: "Venta no encontrada" };
@@ -432,12 +448,13 @@ class DataManager {
                 "Producto": sale.producto,
                 "Talla": sale.talla,
                 "Color": sale.color,
+                "Cliente": sale.cliente || "Consumidor Final",
                 "Cantidad": sale.cantidad,
                 "Precio Unit.": `$${sale.precioUnitario.toFixed(2)}`,
                 "Total Venta": `$${sale.totalVenta.toFixed(2)}`,
+                "Estado": (sale.estado === 'pagado' ? 'Pagado' : 'DEUDA'),
                 "Vendedor": sale.vendedor
             }));
-
             // Crear libro y hoja
             const worksheet = XLSX.utils.json_to_sheet(rows);
             const workbook = XLSX.utils.book_new();

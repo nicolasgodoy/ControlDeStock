@@ -946,6 +946,39 @@ body.light-mode .sales-table td {
     background: rgba(255, 255, 255, 0.02);
 }
 
+/* Status Badges */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-paid {
+    background: rgba(67, 233, 123, 0.1);
+    color: #43e97b;
+    border: 1px solid rgba(67, 233, 123, 0.2);
+}
+
+.status-debt {
+    background: rgba(255, 51, 102, 0.1);
+    color: #ff3366;
+    border: 1px solid rgba(255, 51, 102, 0.2);
+    box-shadow: 0 0 10px rgba(255, 51, 102, 0.1);
+}
+
+body.light-mode .status-paid {
+    background: #e7f9ee;
+    color: #0b8a44;
+}
+
+body.light-mode .status-debt {
+    background: #fff0f3;
+    color: #d61f4d;
+}
+
 body.light-mode .sales-table tr:hover {
     background: #f8f9fa;
 }
@@ -1003,12 +1036,34 @@ body.light-mode .btn-page.active {
 
 
 @media (max-width: 768px) {
-
+    /* Ocultar celdas MENOS importantes en mobile para que quepa bien la info crítica */
+    .sales-table th:nth-child(1),
+    .sales-table td:nth-child(1),
+    /* Fecha */
     .sales-table th:nth-child(3),
     .sales-table td:nth-child(3),
+    /* Talla */
     .sales-table th:nth-child(5),
-    .sales-table td:nth-child(5) {
+    .sales-table td:nth-child(5)
+
+    /* Cantidad */
+        {
         display: none;
+    }
+
+    .sales-table th,
+    .sales-table td {
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+
+    .status-badge {
+        padding: 3px 6px;
+        font-size: 9px;
+    }
+
+    .btn-trash {
+        padding: 5px;
     }
 }
 
