@@ -809,7 +809,35 @@ body.light-mode .modal-content {
     font-size: 1rem;
     outline: none;
     cursor: pointer;
+    text-align: left;
 }
+
+.input-hours::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+}
+
+.filter-label-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 2px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s;
+}
+
+.filter-label-group:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .filter-label-group {
+    background: #f1f5f9;
+    border-color: #ddd;
+}
+
 
 /* Fix for dropdown options in dark mode */
 .input-hours option {
@@ -1443,15 +1471,15 @@ body.light-mode .stat-value {
     .financial-dashboard {
         grid-template-columns: 1fr;
     }
-    
+
     .recovery-stats {
         gap: 20px;
     }
-    
+
     .finance-value {
         font-size: 28px;
     }
-    
+
     .recovery-section {
         padding: 20px;
     }

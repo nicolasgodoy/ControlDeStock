@@ -58,6 +58,13 @@ class UIController {
         this.balanceRestante = document.getElementById('balanceRestante');
         this.btnEditCapital = document.getElementById('btnEditCapital');
 
+        // Capital Modal Elements
+        this.capitalModal = document.getElementById('capitalModal');
+        this.capitalInput = document.getElementById('capitalInput');
+        this.btnSaveCapital = document.getElementById('btnSaveCapital');
+        this.btnCancelCapital = document.getElementById('btnCancelCapital');
+        this.closeCapitalModalBtn = document.getElementById('closeCapitalModal');
+
         // Custom Modals
         this.confirmModal = document.getElementById('confirmModal');
         this.saleModal = document.getElementById('saleModal');
@@ -129,10 +136,15 @@ class UIController {
             if (e.target === this.confirmModal) this.closeConfirm();
             if (e.target === this.saleModal) this.closeSaleModal();
             if (e.target === this.itemModal) this.closeItemModal();
+            if (e.target === this.capitalModal) this.closeCapitalModal();
         });
 
         // Close buttons
         document.getElementById('closeSaleModal').addEventListener('click', () => this.closeSaleModal());
+        if (this.closeCapitalModalBtn) this.closeCapitalModalBtn.addEventListener('click', () => this.closeCapitalModal());
+        if (this.btnCancelCapital) this.btnCancelCapital.addEventListener('click', () => this.closeCapitalModal());
+        if (this.btnSaveCapital) this.btnSaveCapital.addEventListener('click', () => this.saveCapital());
+
         this.btnConfirmCancel.addEventListener('click', () => this.closeConfirm());
 
         // Data Sync
@@ -722,17 +734,24 @@ class UIController {
 
     async handleEditCapital() {
         const current = dataManager.dataCache.capitalInvertido || 0;
-        const newCapital = prompt("Ingresa el capital invertido total:", current);
+        this.capitalInput.value = current;
+        this.capitalModal.style.display = 'flex';
+        this.capitalInput.focus();
+    }
 
-        if (newCapital !== null) {
-            const amount = parseFloat(newCapital);
-            if (!isNaN(amount)) {
-                await dataManager.updateCapital(amount);
-                this.showNotification('Capital actualizado correctamente');
-                this.renderBalance();
-            } else {
-                alert('Monto no válido');
-            }
+    closeCapitalModal() {
+        this.capitalModal.style.display = 'none';
+    }
+
+    async saveCapital() {
+        const amount = parseFloat(this.capitalInput.value);
+        if (!isNaN(amount)) {
+            await dataManager.updateCapital(amount);
+            this.showNotification('Capital actualizado correctamente');
+            this.closeCapitalModal();
+            this.renderBalance();
+        } else {
+            alert('Monto no válido');
         }
     }
 

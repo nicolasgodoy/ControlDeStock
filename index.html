@@ -222,7 +222,11 @@
                                 <input type="text" id="salesSearchInput" class="input-hours"
                                     placeholder="Buscar producto..." style="padding-left: 35px; width: 200px;">
                             </div>
-                            <input type="date" id="salesFilterDate" class="input-hours" style="width: auto;">
+                            <label for="salesFilterDate" class="filter-label-group">
+                                <span style="color: #94a3b8; font-size: 13px;">Filtrar:</span>
+                                <input type="date" id="salesFilterDate" class="input-hours" style="width: auto;"
+                                    onclick="this.showPicker()">
+                            </label>
                         </div>
                     </div>
 
@@ -282,8 +286,11 @@
                             Balance Financiero
                         </h2>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <span style="color: #94a3b8; font-size: 13px;">Filtrar Mes:</span>
-                            <input type="month" id="balanceMonthFilter" class="input-hours" style="width: auto;">
+                            <label for="balanceMonthFilter" class="filter-label-group">
+                                <span style="color: #94a3b8; font-size: 13px;">Filtrar Mes:</span>
+                                <input type="month" id="balanceMonthFilter" class="input-hours" style="width: auto;"
+                                    onclick="this.showPicker()">
+                            </label>
                         </div>
                     </div>
 
@@ -504,6 +511,35 @@
                 </div>
                 <button id="btnConfirmSale" class="btn-modal btn-save" style="width: 100%; height: 45px;">Confirmar
                     Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Capital -->
+    <div id="capitalModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>💰 Editar Capital</h2>
+                <span class="modal-close" id="closeCapitalModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="capitalInput">Monto Invertido Total:</label>
+                    <input type="number" id="capitalInput" class="input-hours" placeholder="0.00" step="0.01" min="0">
+                    <p style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
+                        Este valor se usa para calcular la ganancia neta respecto a las ventas totales.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button id="btnCancelCapital" class="btn-modal btn-cancel" style="flex: 1;">Cancelar</button>
+                    <button id="btnSaveCapital" class="btn-modal btn-save" style="flex: 1;">Guardar</button>
+                </div>
             </div>
         </div>
     </div>
