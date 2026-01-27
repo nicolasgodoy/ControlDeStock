@@ -34,7 +34,7 @@ class DataManager {
     async login(username, token) {
         try {
             console.log('🔐 Intentando login con usuario:', username);
-            const docRef = doc(db, "Usuarios", username);
+            const docRef = doc(db, "UsuariosControlStock", username);
             const docSnap = await getDoc(docRef);
 
             console.log('📄 Documento existe:', docSnap.exists());
@@ -89,7 +89,7 @@ class DataManager {
 
         if (this.unsubscribe) this.unsubscribe();
 
-        const docRef = doc(db, "Usuarios", this.currentUser);
+        const docRef = doc(db, "UsuariosControlStock", this.currentUser);
         this.unsubscribe = onSnapshot(docRef, (doc) => {
             if (doc.exists()) {
                 const data = doc.data();
@@ -123,7 +123,7 @@ class DataManager {
         if (!this.currentUser) return [];
 
         try {
-            const docRef = doc(db, "Usuarios", this.currentUser);
+            const docRef = doc(db, "UsuariosControlStock", this.currentUser);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -185,7 +185,7 @@ class DataManager {
         if (!this.currentUser) return false;
 
         try {
-            const docRef = doc(db, "Usuarios", this.currentUser);
+            const docRef = doc(db, "UsuariosControlStock", this.currentUser);
             await setDoc(docRef, {
                 inventory: this.dataCache.inventory,
                 sales: this.dataCache.sales,
@@ -209,7 +209,7 @@ class DataManager {
         if (!this.currentUser) return [];
 
         try {
-            const docRef = doc(db, "Usuarios", this.currentUser);
+            const docRef = doc(db, "UsuariosControlStock", this.currentUser);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -297,12 +297,13 @@ class DataManager {
         if (!this.currentUser) return false;
 
         try {
-            const docRef = doc(db, "Usuarios", this.currentUser);
+            const docRef = doc(db, "UsuariosControlStock", this.currentUser);
             await setDoc(docRef, {
                 inventory: this.dataCache.inventory,
                 sales: this.dataCache.sales,
                 notes: this.dataCache.notes,
-                lastUpdate: new Date().toISOString()
+                lastUpdate: new Date().toISOString(),
+                updatedBy: this.currentUser
             }, { merge: true });
             this.notifySync(this.dataCache);
             return true;
@@ -324,7 +325,7 @@ class DataManager {
         if (!this.currentUser) return [];
 
         try {
-            const docRef = doc(db, "Usuarios", this.currentUser);
+            const docRef = doc(db, "UsuariosControlStock", this.currentUser);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -363,7 +364,7 @@ class DataManager {
         if (!this.currentUser) return false;
 
         try {
-            const docRef = doc(db, "Usuarios", this.currentUser);
+            const docRef = doc(db, "UsuariosControlStock", this.currentUser);
             await setDoc(docRef, {
                 notes: this.dataCache.notes,
                 lastUpdate: new Date().toISOString()
