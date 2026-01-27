@@ -18,11 +18,13 @@ class UIController {
         this.viewInventory = document.getElementById('viewInventory');
         this.viewSales = document.getElementById('viewSales');
         this.viewNotes = document.getElementById('viewNotes');
+        this.viewBalance = document.getElementById('viewBalance');
 
         // Tabs
         this.tabInventory = document.getElementById('tabInventory');
         this.tabSales = document.getElementById('tabSales');
         this.tabNotes = document.getElementById('tabNotes');
+        this.tabBalance = document.getElementById('tabBalance');
 
         // Grids/Lists
         this.inventoryGrid = document.getElementById('inventoryGrid');
@@ -43,6 +45,18 @@ class UIController {
         this.userName = document.getElementById('userName');
         this.userInitialLetter = document.getElementById('userInitialLetter');
         this.btnExportExcel = document.getElementById('btnExportExcel');
+        this.totalSalesAmount = document.getElementById('totalSalesAmount');
+
+        // Balance View Elements
+        this.balanceMonthFilter = document.getElementById('balanceMonthFilter');
+        this.balanceCapital = document.getElementById('balanceCapital');
+        this.balanceVentasMensuales = document.getElementById('balanceVentasMensuales');
+        this.balanceGanancia = document.getElementById('balanceGanancia');
+        this.recoveryPercentage = document.getElementById('recoveryPercentage');
+        this.recoveryBar = document.getElementById('recoveryBar');
+        this.balanceTotalRecaudado = document.getElementById('balanceTotalRecaudado');
+        this.balanceRestante = document.getElementById('balanceRestante');
+        this.btnEditCapital = document.getElementById('btnEditCapital');
 
         // Custom Modals
         this.confirmModal = document.getElementById('confirmModal');
@@ -79,6 +93,7 @@ class UIController {
         this.tabInventory.addEventListener('click', () => this.switchTab('inventory'));
         this.tabSales.addEventListener('click', () => this.switchTab('sales'));
         this.tabNotes.addEventListener('click', () => this.switchTab('notes'));
+        this.tabBalance.addEventListener('click', () => this.switchTab('balance'));
 
         // Inventory Actions
         document.getElementById('btnAddItem').addEventListener('click', () => this.showItemModal());
@@ -90,6 +105,8 @@ class UIController {
         this.filterCategory.addEventListener('change', () => this.filterInventory());
         this.salesFilterDate.addEventListener('change', () => this.renderSales());
         this.salesSearchInput.addEventListener('input', () => this.renderSales());
+        this.balanceMonthFilter.addEventListener('change', () => this.renderBalance());
+        this.btnEditCapital.addEventListener('click', () => this.handleEditCapital());
 
         // Item Modal
         document.querySelector('.modal-close').addEventListener('click', () => this.closeItemModal());
@@ -123,6 +140,7 @@ class UIController {
             this.renderInventory(data.inventory);
             this.renderSales(data.sales);
             this.renderNotes(data.notes);
+            this.renderBalance();
             this.updateStats();
         });
     }
@@ -672,11 +690,57 @@ class UIController {
         }
     }
 
+    // --- BALANCE ---
+
+    renderBalance() {
+        const monthFilter = this.balanceMonthFilter.value; // Formato YYYY-MM
+        const stats = dataManager.getFinancialStats(monthFilter);
+
+        this.balanceCapital.textContent = `$${stats.capitalInvertido.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        this.balanceVentasMensuales.textContent = `$${stats.ventasMensuales.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+
+        // Ganancia Neta color logic
+        this.balanceGanancia.textContent = `$${stats.gananciaNeta.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        this.balanceGanancia.style.color = stats.gananciaNeta >= 0 ? '#43e97b' : '#ff3366';
+
+        this.balanceTotalRecaudado.textContent = `$${stats.totalVentas.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+
+        const restante = Math.max(0, stats.capitalInvertido - stats.totalVentas);
+        this.balanceRestante.textContent = `$${restante.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+
+        // Recovery Progress
+        const percentage = Math.min(100, stats.porcentajeRecuperado).toFixed(1);
+        this.recoveryPercentage.textContent = `${percentage}%`;
+        this.recoveryBar.style.width = `${percentage}%`;
+
+        if (stats.porcentajeRecuperado >= 100) {
+            this.recoveryBar.style.background = 'linear-gradient(to right, #43e97b, #38f9d7)';
+        } else {
+            this.recoveryBar.style.background = 'linear-gradient(to right, #ff5e62, #ff9966)';
+        }
+    }
+
+    async handleEditCapital() {
+        const current = dataManager.dataCache.capitalInvertido || 0;
+        const newCapital = prompt("Ingresa el capital invertido total:", current);
+
+        if (newCapital !== null) {
+            const amount = parseFloat(newCapital);
+            if (!isNaN(amount)) {
+                await dataManager.updateCapital(amount);
+                this.showNotification('Capital actualizado correctamente');
+                this.renderBalance();
+            } else {
+                alert('Monto no válido');
+            }
+        }
+    }
+
     // --- NAVEGACIÓN ---
 
     switchTab(tab) {
         this.activeTab = tab;
-        const tabs = ['inventory', 'sales', 'notes'];
+        const tabs = ['inventory', 'sales', 'notes', 'balance'];
 
         tabs.forEach(t => {
             const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -685,6 +749,7 @@ class UIController {
             if (t === tab) {
                 btn.classList.add('active');
                 view.style.display = 'block';
+                if (t === 'balance') this.renderBalance();
             } else {
                 btn.classList.remove('active');
                 view.style.display = 'none';
@@ -730,11 +795,15 @@ class UIController {
     updateStats() {
         const itemsCount = dataManager.getTotalItems();
         const stockSum = dataManager.getTotalStock();
+        const stats = dataManager.getFinancialStats();
 
         console.log('📈 UI Actualizando Estadísticas:', { itemsCount, stockSum });
 
         if (this.totalItems) this.totalItems.textContent = itemsCount;
         if (this.totalStock) this.totalStock.textContent = stockSum;
+        if (this.totalSalesAmount) {
+            this.totalSalesAmount.textContent = `$${stats.totalVentas.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        }
     }
 
     // --- TEMA ---

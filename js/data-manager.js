@@ -23,7 +23,8 @@ class DataManager {
         this.dataCache = {
             inventory: [],
             sales: [],
-            notes: []
+            notes: [],
+            capitalInvertido: 0
         };
         this.unsubscribe = null;
         this.syncCallbacks = [];
@@ -96,6 +97,7 @@ class DataManager {
                 this.dataCache.inventory = data.inventory || [];
                 this.dataCache.sales = data.sales || [];
                 this.dataCache.notes = data.notes || [];
+                this.dataCache.capitalInvertido = data.capitalInvertido || 0;
                 this.notifySync(this.dataCache);
             }
         }, (error) => {
@@ -293,6 +295,38 @@ class DataManager {
         return { success: saved };
     }
 
+    async updateCapital(amount) {
+        this.dataCache.capitalInvertido = parseFloat(amount) || 0;
+        return await this.saveAllData();
+    }
+
+    getFinancialStats(monthFilter = null) {
+        const sales = this.dataCache.sales || [];
+        const capital = this.dataCache.capitalInvertido || 0;
+
+        // Ventas Totales (Históricas)
+        const totalVentas = sales.reduce((sum, s) => sum + (s.totalVenta || 0), 0);
+
+        // Ventas Mensuales (Filtradas)
+        let ventasMensuales = totalVentas;
+        if (monthFilter) {
+            ventasMensuales = sales
+                .filter(s => s.fecha.startsWith(monthFilter))
+                .reduce((sum, s) => sum + (s.totalVenta || 0), 0);
+        }
+
+        const gananciaNeta = totalVentas - capital;
+        const porcentajeRecuperado = capital > 0 ? (totalVentas / capital) * 100 : 0;
+
+        return {
+            capitalInvertido: capital,
+            totalVentas: totalVentas,
+            ventasMensuales: ventasMensuales,
+            gananciaNeta: gananciaNeta,
+            porcentajeRecuperado: porcentajeRecuperado
+        };
+    }
+
     async saveAllData() {
         if (!this.currentUser) return false;
 
@@ -302,6 +336,7 @@ class DataManager {
                 inventory: this.dataCache.inventory,
                 sales: this.dataCache.sales,
                 notes: this.dataCache.notes,
+                capitalInvertido: this.dataCache.capitalInvertido || 0,
                 lastUpdate: new Date().toISOString(),
                 updatedBy: this.currentUser
             }, { merge: true });

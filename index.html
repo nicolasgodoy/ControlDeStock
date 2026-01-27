@@ -93,6 +93,14 @@
                 </svg>
                 Notas
             </button>
+            <button id="tabBalance" class="nav-tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23" />
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                Balance
+            </button>
         </nav>
 
         <div class="Contenido-Lateral">
@@ -120,6 +128,10 @@
                         <div class="stats-row">
                             <span class="stats-label">Stock Total:</span>
                             <span id="totalStock" class="stats-value accent">0</span>
+                        </div>
+                        <div class="stats-row">
+                            <span class="stats-label">Ventas Totales:</span>
+                            <span id="totalSalesAmount" class="stats-value" style="color: #43e97b;">$0.00</span>
                         </div>
                     </div>
                 </div>
@@ -253,6 +265,110 @@
 
                     <div id="notesList" class="notes-list">
                         <!-- Notas se inyectan aquí -->
+                    </div>
+                </section>
+            </main>
+
+            <!-- Vista Balance -->
+            <main id="viewBalance" style="display: none;">
+                <section class="history-container">
+                    <div class="header-filter-row"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                        <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#43e97b"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                            Balance Financiero
+                        </h2>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span style="color: #94a3b8; font-size: 13px;">Filtrar Mes:</span>
+                            <input type="month" id="balanceMonthFilter" class="input-hours" style="width: auto;">
+                        </div>
+                    </div>
+
+                    <div class="financial-dashboard">
+                        <div class="finance-card">
+                            <div class="finance-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="finance-icon-box"
+                                        style="background: rgba(255, 107, 53, 0.1); color: #ff6b35;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                        </svg>
+                                    </div>
+                                    <span class="finance-label">Capital Invertido</span>
+                                </div>
+                                <button id="btnEditCapital" class="btn-edit-small">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="finance-value" id="balanceCapital">$0.00</div>
+                            <div class="finance-footer">Monto inicial total</div>
+                        </div>
+
+                        <div class="finance-card">
+                            <div class="finance-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="finance-icon-box"
+                                        style="background: rgba(67, 233, 123, 0.1); color: #43e97b;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <line x1="12" y1="1" x2="12" y2="23" />
+                                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                        </svg>
+                                    </div>
+                                    <span class="finance-label">Ventas del Mes</span>
+                                </div>
+                            </div>
+                            <div class="finance-value highlight" id="balanceVentasMensuales">$0.00</div>
+                            <div class="finance-footer">Según el filtro seleccionado</div>
+                        </div>
+
+                        <div class="finance-card">
+                            <div class="finance-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="finance-icon-box"
+                                        style="background: rgba(32, 226, 215, 0.1); color: #20e2d7;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                        </svg>
+                                    </div>
+                                    <span class="finance-label">Ganancia Neta</span>
+                                </div>
+                            </div>
+                            <div class="finance-value" id="balanceGanancia">$0.00</div>
+                            <div class="finance-footer">Histórico vs Capital</div>
+                        </div>
+                    </div>
+
+                    <div class="recovery-section">
+                        <div class="recovery-header">
+                            <span class="recovery-title">📊 Estado de Recuperación</span>
+                            <span class="recovery-percentage" id="recoveryPercentage">0%</span>
+                        </div>
+                        <div class="recovery-bar-container">
+                            <div class="recovery-bar-progress" id="recoveryBar"></div>
+                        </div>
+                        <div class="recovery-stats">
+                            <div class="recovery-stat">
+                                <span class="stat-label">Total Recaudado:</span>
+                                <span class="stat-value" id="balanceTotalRecaudado">$0.00</span>
+                            </div>
+                            <div class="recovery-stat">
+                                <span class="stat-label">Falta para el 100%:</span>
+                                <span class="stat-value" id="balanceRestante">$0.00</span>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </main>
