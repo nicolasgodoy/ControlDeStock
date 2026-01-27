@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Stock - Ropa</title>
+    <link rel="stylesheet" type="text/css" href="estilos.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <!-- Login Modal (Shown on startup) -->
+    <div id="loginModal" class="modal" style="display: flex;">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header" style="justify-content: center;">
+                <h2>🔐 Acceso al Sistema</h2>
+            </div>
+            <div class="modal-body">
+                <p style="color: #ccc; margin-bottom: 25px; font-size: 14px; text-align: center;">
+                    Ingresa tus credenciales para acceder al control de stock
+                </p>
+
+                <div class="form-group">
+                    <label for="loginUsername">Usuario:</label>
+                    <input type="text" id="loginUsername" class="input-hours" placeholder="Nombre de usuario"
+                        autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="loginToken">Token de Acceso:</label>
+                    <input type="password" id="loginToken" class="input-hours" placeholder="Token único"
+                        autocomplete="current-password">
+                </div>
+
+                <div id="loginError" style="margin-top: 15px; font-size: 13px; color: #ff3366; text-align: center;">
+                </div>
+
+                <button id="btnLogin" class="btn-modal btn-save"
+                    style="width: 100%; margin-top: 20px; height: 50px; font-size: 16px;">
+                    Ingresar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainApp" style="display: none;">
+        <div class="header">
+            <h1 class="title">Control de Stock - Ropa</h1>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <span id="currentUserDisplay" style="color: #bbc0ff; font-size: 14px;"></span>
+                <button id="btnLogout" class="export-btn btn-logout" title="Cerrar Sesión">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    Salir
+                </button>
+                <button id="themeToggle" class="theme-toggle" title="Cambiar tema">
+                    <!-- Icono inyectado por JS -->
+                </button>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <button id="tabInventory" class="nav-tab active">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 8V21H3V8" />
+                    <path d="M1 3H23V8H1V3Z" />
+                    <path d="M10 12H14" />
+                </svg>
+                Inventario
+            </button>
+            <button id="tabSales" class="nav-tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23" />
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                Ventas
+            </button>
+            <button id="tabNotes" class="nav-tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+                Notas
+            </button>
+        </nav>
+
+        <div class="Contenido-Lateral">
+            <div class="sidebar">
+                <div class="user-card">
+                    <div class="avatar">
+                        <div class="avatar-content" id="userInitialContainer">
+                            <span id="userInitialLetter">P</span>
+                            <div class="avatar-badge">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="user-label">Sistema de Inventario</div>
+                    <div class="user-name" id="userName">Usuario</div>
+
+                    <div class="stats-summary" id="statsSummaryContainer">
+                        <div class="stats-row">
+                            <span class="stats-label">Total Prendas:</span>
+                            <span id="totalItems" class="stats-value">0</span>
+                        </div>
+                        <div class="stats-row">
+                            <span class="stats-label">Stock Total:</span>
+                            <span id="totalStock" class="stats-value accent">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="export-buttons">
+                    <button id="btnAddItem" class="export-btn btn-primary"
+                        style="justify-content: center; font-weight: bold;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Nueva Prenda
+                    </button>
+                    <div class="sidebar-divider"></div>
+
+                    <button id="btnExportExcel" class="export-btn btn-excel">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                        Descargar Excel (.xlsx)
+                    </button>
+                    <button id="btnCopy" class="export-btn btn-copy">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        Copiar para Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista Inventario -->
+            <main id="viewInventory" class="vista-activa">
+                <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
+                    <div class="search-container-small" style="flex: 1;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon-svg"
+                            style="color: #94a3b8;">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input type="text" id="searchInput" class="input-hours"
+                            placeholder="Buscar por tipo, color, talla..." style="width: 100%; padding-left: 42px;">
+                    </div>
+                    <select id="filterCategory" class="input-hours" style="width: auto;">
+                        <option value="">Todas las categorías</option>
+                        <option value="remeras">Remeras</option>
+                        <option value="pantalones">Pantalones</option>
+                        <option value="vestidos">Vestidos</option>
+                        <option value="accesorios">Accesorios</option>
+                        <option value="calzado">Calzado</option>
+                        <option value="otros">Otros</option>
+                    </select>
+                </div>
+                <section id="inventoryGrid" class="Contenido-Grid-Cards">
+                    <!-- Las cards se inyectan aquí -->
+                </section>
+            </main>
+
+            <!-- Vista Ventas -->
+            <main id="viewSales" style="display: none;">
+                <section class="history-container">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                        <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff8c42"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23" />
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                            Historial de Ventas
+                        </h2>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <div class="search-container-small">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                    class="search-icon-svg" style="color: #94a3b8;">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                                <input type="text" id="salesSearchInput" class="input-hours"
+                                    placeholder="Buscar producto..." style="padding-left: 35px; width: 200px;">
+                            </div>
+                            <input type="date" id="salesFilterDate" class="input-hours" style="width: auto;">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="sales-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Talla</th>
+                                    <th>Cant.</th>
+                                    <th>Precio</th>
+                                    <th>Total</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody">
+                                <!-- Las ventas se inyectan aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="salesPagination" class="pagination-container">
+                        <!-- Botones de paginación -->
+                    </div>
+                </section>
+            </main>
+
+            <!-- Vista Notas -->
+            <main id="viewNotes" style="display: none;">
+                <section class="history-container">
+                    <h2 style="margin-bottom: 25px; color: white;">📝 Notas Compartidas</h2>
+
+                    <div class="add-note-container" style="margin-bottom: 30px; display: flex; gap: 10px;">
+                        <input type="text" id="noteInput" class="note-input-premium"
+                            placeholder="Escribe una nota o recordatorio..." style="flex: 1;">
+                        <button id="btnAddNote" class="btn-add-note" style="width: 40px; height: 40px;">+</button>
+                    </div>
+
+                    <div id="notesList" class="notes-list">
+                        <!-- Notas se inyectan aquí -->
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Agregar/Editar Prenda -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="itemModalTitle">Nueva Prenda</h2>
+                <span class="modal-close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </span>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="itemTipo">Tipo de Prenda:</label>
+                    <input type="text" id="itemTipo" class="input-hours" placeholder="Ej: Remera, Pantalón, Vestido">
+                </div>
+
+                <div class="form-group">
+                    <label for="itemTalla">Talla/Tamaño:</label>
+                    <select id="itemTalla" class="input-hours">
+                        <option value="XS">XS</option>
+                        <option value="S">S</option>
+                        <option value="M" selected>M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                        <option value="Única">Única</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemColor">Color:</label>
+                    <input type="text" id="itemColor" class="input-hours" placeholder="Ej: Azul, Negro, Rojo">
+                </div>
+
+                <div class="form-group">
+                    <label for="itemCantidad">Cantidad en Stock:</label>
+                    <input type="number" id="itemCantidad" class="input-hours" placeholder="0" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="itemPrecio">Precio:</label>
+                    <input type="number" id="itemPrecio" class="input-hours" placeholder="0.00" step="0.01" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label>Categoría (Color):</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" class="color-option" data-color="remeras"
+                            style="width: 30px; height: 30px; background: linear-gradient(to right, #ff5e62, #ff9966); border-radius: 50%; border: 2px solid transparent;"></button>
+                        <button type="button" class="color-option" data-color="pantalones"
+                            style="width: 30px; height: 30px; background: linear-gradient(to right, #56CCF2, #2F80ED); border-radius: 50%; border: 2px solid transparent;"></button>
+                        <button type="button" class="color-option" data-color="vestidos"
+                            style="width: 30px; height: 30px; background: linear-gradient(to right, #ff0844, #ffb199); border-radius: 50%; border: 2px solid transparent;"></button>
+                        <button type="button" class="color-option" data-color="accesorios"
+                            style="width: 30px; height: 30px; background: linear-gradient(to right, #43e97b, #38f9d7); border-radius: 50%; border: 2px solid transparent;"></button>
+                        <button type="button" class="color-option" data-color="calzado"
+                            style="width: 30px; height: 30px; background: linear-gradient(to right, #a18cd1, #fbc2eb); border-radius: 50%; border: 2px solid transparent;"></button>
+                        <button type="button" class="color-option" data-color="otros"
+                            style="width: 30px; height: 30px; background: linear-gradient(to right, #f6d365, #fda085); border-radius: 50%; border: 2px solid transparent;"></button>
+                    </div>
+                    <input type="hidden" id="itemCategoria" value="remeras">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnCancelItem" class="btn-modal btn-cancel">Cancelar</button>
+                <button id="btnSaveItem" class="btn-modal btn-save">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación Genérico -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1c204b, #2d3478);">
+                <h2 id="confirmTitle">Confirmar Acción</h2>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <p id="confirmMessage" style="margin-bottom: 20px; line-height: 1.5; color: #eee;"></p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="btnConfirmCancel" class="btn-modal btn-cancel" style="flex: 1;">Cancelar</button>
+                    <button id="btnConfirmOk" class="btn-modal btn-save" style="flex: 1;">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Vender (Input rápido) -->
+    <div id="saleModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>📦 Registrar Venta</h2>
+                <span class="modal-close" id="closeSaleModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </span>
+            </div>
+            <div class="modal-body">
+                <div id="saleItemInfo"
+                    style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <!-- Info del item inyectada por JS -->
+                </div>
+                <div class="form-group">
+                    <label for="saleQuantity">Cantidad a vender:</label>
+                    <input type="number" id="saleQuantity" class="input-hours" value="1" min="1">
+                </div>
+                <div id="saleError"
+                    style="color: #ff3366; font-size: 13px; margin-bottom: 15px; text-align: center; display: none;">
+                </div>
+                <button id="btnConfirmSale" class="btn-modal btn-save" style="width: 100%; height: 45px;">Confirmar
+                    Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+
+</body>
+
+</html>
