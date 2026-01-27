@@ -506,6 +506,38 @@ class DataManager {
         }
     }
 
+    async exportBalanceToExcel(monthFilter = null) {
+        try {
+            const stats = this.getFinancialStats(monthFilter);
+
+            // Preparar datos para reporte
+            const rows = [
+                { "Concepto": "Capital Invertido Total", "Monto": `$${stats.capitalInvertido.toFixed(2)}` },
+                { "Concepto": "Ventas Históricas Totales", "Monto": `$${stats.totalVentas.toFixed(2)}` },
+                { "Concepto": monthFilter ? `Ventas de ${monthFilter}` : "Ventas del Período", "Monto": `$${stats.ventasMensuales.toFixed(2)}` },
+                { "Concepto": "Ganancia Neta (Total)", "Monto": `$${stats.gananciaNeta.toFixed(2)}` },
+                { "Concepto": "Porcentaje de Recuperación", "Monto": `${stats.porcentajeRecuperado.toFixed(1)}%` },
+                { "Concepto": "Fecha de Reporte", "Monto": new Date().toLocaleDateString() }
+            ];
+
+            // Crear libro y hoja
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Balance");
+
+            // Nombre del archivo
+            const fileName = `Balance_Financiero_${monthFilter ? monthFilter : 'General'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+            // Generar archivo y descargar
+            XLSX.writeFile(workbook, fileName);
+            return true;
+        } catch (error) {
+            console.error("Error al exportar reporte de balance:", error);
+            alert("Error al exportar reporte de balance.");
+            return false;
+        }
+    }
+
     // --- UTILIDADES ---
 
     generateId() {
