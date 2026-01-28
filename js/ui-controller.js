@@ -733,8 +733,18 @@ class UIController {
     }
 
     async handleEditCapital() {
-        const current = dataManager.dataCache.capitalInvertido || 0;
+        const monthFilter = this.balanceMonthFilter.value || "general";
+        const currentCapitalMap = dataManager.dataCache.capitalInvertido || {};
+        const current = currentCapitalMap[monthFilter] !== undefined ? currentCapitalMap[monthFilter] : (currentCapitalMap["general"] || 0);
+
         this.capitalInput.value = current;
+
+        // Mostrar el mes que se está editando
+        const capitalTitle = this.capitalModal.querySelector('h2');
+        if (capitalTitle) {
+            capitalTitle.textContent = monthFilter !== "general" ? `💰 Capital - ${monthFilter}` : '💰 Editar Capital';
+        }
+
         this.capitalModal.style.display = 'flex';
         this.capitalInput.focus();
     }
@@ -745,9 +755,11 @@ class UIController {
 
     async saveCapital() {
         const amount = parseFloat(this.capitalInput.value);
+        const monthFilter = this.balanceMonthFilter.value || "general";
+
         if (!isNaN(amount)) {
-            await dataManager.updateCapital(amount);
-            this.showNotification('Capital actualizado correctamente');
+            await dataManager.updateCapital(amount, monthFilter);
+            this.showNotification(`Capital de ${monthFilter} actualizado`);
             this.closeCapitalModal();
             this.renderBalance();
         } else {

@@ -24,7 +24,7 @@ class DataManager {
             inventory: [],
             sales: [],
             notes: [],
-            capitalInvertido: 0
+            capitalInvertido: {} // Cambiado a objeto para soportar múltiples meses
         };
         this.unsubscribe = null;
         this.syncCallbacks = [];
@@ -97,7 +97,16 @@ class DataManager {
                 this.dataCache.inventory = data.inventory || [];
                 this.dataCache.sales = data.sales || [];
                 this.dataCache.notes = data.notes || [];
-                this.dataCache.capitalInvertido = data.capitalInvertido || 0;
+
+                // Migración y carga de capital
+                const storedCapital = data.capitalInvertido;
+                if (typeof storedCapital === 'number') {
+                    // Si es un número (formato viejo), lo migramos a un objeto "general"
+                    this.dataCache.capitalInvertido = { "general": storedCapital };
+                } else {
+                    this.dataCache.capitalInvertido = storedCapital || {};
+                }
+
                 this.notifySync(this.dataCache);
             }
         }, (error) => {
@@ -295,16 +304,23 @@ class DataManager {
         return { success: saved };
     }
 
-    async updateCapital(amount) {
-        this.dataCache.capitalInvertido = parseFloat(amount) || 0;
+    async updateCapital(amount, month = "general") {
+        if (!this.dataCache.capitalInvertido || typeof this.dataCache.capitalInvertido !== 'object') {
+            this.dataCache.capitalInvertido = {};
+        }
+        this.dataCache.capitalInvertido[month] = parseFloat(amount) || 0;
         return await this.saveAllData();
     }
 
     getFinancialStats(monthFilter = null) {
         const sales = this.dataCache.sales || [];
-        const capital = this.dataCache.capitalInvertido || 0;
+        const month = monthFilter || "general";
 
-        // Ventas Totales (Históricas)
+        // Obtener capital para el mes específico (fallback al "general" si no existe para ese mes)
+        const capitalInvertidoMap = this.dataCache.capitalInvertido || {};
+        const capital = capitalInvertidoMap[month] !== undefined ? capitalInvertidoMap[month] : (capitalInvertidoMap["general"] || 0);
+
+        // Ventas Totales (Históricas) - Esto se usa para el estado de recuperación
         const totalVentas = sales.reduce((sum, s) => sum + (s.totalVenta || 0), 0);
 
         // Ventas Mensuales (Filtradas)
@@ -315,7 +331,10 @@ class DataManager {
                 .reduce((sum, s) => sum + (s.totalVenta || 0), 0);
         }
 
-        const gananciaNeta = totalVentas - capital;
+        // Ganancia Neta: Ventas del mes vs Capital del mes
+        const gananciaNeta = (monthFilter ? ventasMensuales : totalVentas) - capital;
+
+        // Porcentaje recuperado: Ventas totales vs Capital del mes (asumiendo que el capital es la inversión total para ese punto)
         const porcentajeRecuperado = capital > 0 ? (totalVentas / capital) * 100 : 0;
 
         return {
@@ -336,7 +355,7 @@ class DataManager {
                 inventory: this.dataCache.inventory,
                 sales: this.dataCache.sales,
                 notes: this.dataCache.notes,
-                capitalInvertido: this.dataCache.capitalInvertido || 0,
+                capitalInvertido: this.dataCache.capitalInvertido || {},
                 lastUpdate: new Date().toISOString(),
                 updatedBy: this.currentUser
             }, { merge: true });
