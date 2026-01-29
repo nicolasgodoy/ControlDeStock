@@ -319,29 +319,33 @@ body.light-mode .sidebar-divider {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease;
-    min-height: 320px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-height: 380px;
     position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-8px);
     background-color: #34397b;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
 }
 
 body.light-mode .card {
     background-color: white;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.05);
 }
 
 body.light-mode .card:hover {
     background-color: #f8f9fa;
-    transform: translateY(-5px);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
 }
 
 /* Card Banner */
 .card-banner {
-    height: 55px;
+    height: 8px;
     position: relative;
     overflow: hidden;
     margin-bottom: 0;
@@ -383,18 +387,44 @@ body.light-mode .card:hover {
 .card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    gap: 10px;
 }
 
 .card-title {
-    font-size: 18px;
-    font-weight: 500;
+    font-size: 24px;
+    font-weight: 700;
     color: white;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    flex: 1;
 }
 
 body.light-mode .card-title {
     color: #1a1a2e;
+}
+
+/* Top Seller Badge */
+.top-seller-badge {
+    background: linear-gradient(135deg, #ff6b35, #ff8c42);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.top-seller-badge svg {
+    width: 12px;
+    height: 12px;
 }
 
 .image-options {
@@ -409,49 +439,85 @@ body.light-mode .card-title {
 }
 
 .card-info {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+body.light-mode .card-info {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.05);
 }
 
 .info-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 14px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.info-row:last-child {
+    margin-bottom: 0;
 }
 
 .info-label {
-    color: #bbc0ff;
+    color: #94a3b8;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
 }
 
 .info-value {
     color: white;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 body.light-mode .info-value {
     color: #1a1a2e;
 }
 
+body.light-mode .info-label {
+    color: #64748b;
+}
+
 .card-stock {
     text-align: center;
     margin: 20px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(32, 226, 215, 0.05), rgba(67, 233, 123, 0.05));
+    border-radius: 12px;
+    border: 1px solid rgba(32, 226, 215, 0.1);
+}
+
+body.light-mode .card-stock {
+    background: linear-gradient(135deg, rgba(32, 226, 215, 0.08), rgba(67, 233, 123, 0.08));
+    border-color: rgba(32, 226, 215, 0.15);
 }
 
 .stock-label {
-    font-size: 12px;
-    color: #bbc0ff;
-    margin-bottom: 5px;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
 }
 
 .stock-value {
-    font-size: 36px;
-    font-weight: 300;
+    font-size: 48px;
+    font-weight: 700;
     color: #20e2d7;
+    line-height: 1;
+    margin-bottom: 8px;
 }
 
 .stock-price {
-    font-size: 18px;
+    font-size: 22px;
     color: #ff8c42;
+    font-weight: 700;
     margin-top: 5px;
 }
 

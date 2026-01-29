@@ -683,16 +683,26 @@ class UIController {
             if (val > 0) stockPorTalla[input.dataset.size] = val;
         });
 
+        // Procesar el precio: eliminar puntos (separadores de miles) y reemplazar coma por punto (decimal)
+        const precioInput = document.getElementById('itemPrecio').value.trim();
+        const precioLimpio = precioInput.replace(/\./g, '').replace(',', '.');
+        const precioNumerico = parseFloat(precioLimpio) || 0;
+
         const itemData = {
             tipo: document.getElementById('itemTipo').value.trim(),
             color: document.getElementById('itemColor').value.trim(),
-            precio: document.getElementById('itemPrecio').value,
+            precio: precioNumerico,
             categoria: document.getElementById('itemCategoria').value,
             stockPorTalla: stockPorTalla
         };
 
         if (!itemData.tipo || !itemData.color) {
             alert('Por favor completa los campos obligatorios');
+            return;
+        }
+
+        if (precioNumerico <= 0) {
+            alert('Por favor ingresa un precio válido');
             return;
         }
 
