@@ -81,6 +81,7 @@ class UIController {
         this.currentSalesPage = 1;
         this.salesPerPage = 10;
         this.activeTab = 'inventory';
+        this.sizeStockInputs = document.querySelectorAll('.size-stock-input');
     }
 
     attachEventListeners() {
@@ -144,6 +145,24 @@ class UIController {
         if (this.closeCapitalModalBtn) this.closeCapitalModalBtn.addEventListener('click', () => this.closeCapitalModal());
         if (this.btnCancelCapital) this.btnCancelCapital.addEventListener('click', () => this.closeCapitalModal());
         if (this.btnSaveCapital) this.btnSaveCapital.addEventListener('click', () => this.saveCapital());
+
+        // Stepper logic para tallas
+        document.querySelectorAll('.btn-step').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const size = btn.dataset.size;
+                const input = document.querySelector(`.size-stock-input[data-size="${size}"]`);
+                if (!input) return;
+
+                let val = parseInt(input.value) || 0;
+                if (btn.classList.contains('plus')) {
+                    val++;
+                } else if (btn.classList.contains('minus')) {
+                    val = Math.max(0, val - 1);
+                }
+                input.value = val;
+            });
+        });
 
         this.btnConfirmCancel.addEventListener('click', () => this.closeConfirm());
 
@@ -349,10 +368,23 @@ class UIController {
         this.saleCustomerInput.value = "";
         this.saleStatusInput.value = "pagado";
         document.getElementById('saleError').style.display = 'none';
+
+        // Poblara tallas disponibles
+        const saleTallaSelect = document.getElementById('saleTalla');
+        if (item.stockPorTalla && Object.keys(item.stockPorTalla).length > 0) {
+            saleTallaSelect.innerHTML = Object.keys(item.stockPorTalla)
+                .filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0)
+                .map(t => `<option value="${t}">${t}${dataManager.dataCache.tallaMapping[t] !== t ? ' (' + dataManager.dataCache.tallaMapping[t] + ')' : ''} - Stock: ${item.stockPorTalla[t]}</option>`)
+                .join('');
+        } else {
+            // Fallback para items viejos o sin desglose
+            saleTallaSelect.innerHTML = `<option value="${item.talla}">${item.talla}</option>`;
+        }
+
         this.saleItemInfo.innerHTML = `
             <div style="font-weight: bold; font-size: 16px;">${item.tipo}</div>
-            <div style="font-size: 13px; color: #bbc0ff; margin-top: 5px;">Talla: ${item.talla} | Color: ${item.color}</div>
-            <div style="font-size: 13px; color: #20e2d7; margin-top: 3px;">Stock disponible: ${item.cantidad}</div>
+            <div style="font-size: 13px; color: #bbc0ff; margin-top: 5px;">Color: ${item.color}</div>
+            <div style="font-size: 13px; color: #20e2d7; margin-top: 3px;">Stock total: ${item.cantidad}</div>
         `;
 
         this.saleModal.style.display = 'flex';
@@ -368,6 +400,7 @@ class UIController {
             const qty = parseInt(this.saleQuantityInput.value);
             const cliente = this.saleCustomerInput.value.trim();
             const estado = this.saleStatusInput.value;
+            const talla = saleTallaSelect.value;
             const errorDiv = document.getElementById('saleError');
 
             if (isNaN(qty) || qty <= 0) {
@@ -376,15 +409,17 @@ class UIController {
                 return;
             }
 
-            if (qty > item.cantidad) {
-                errorDiv.textContent = "No hay suficiente stock";
+            // Verificar stock de la talla seleccionada
+            const stockTalla = item.stockPorTalla ? (parseInt(item.stockPorTalla[talla]) || 0) : item.cantidad;
+            if (qty > stockTalla) {
+                errorDiv.textContent = "No hay suficiente stock en esta talla";
                 errorDiv.style.display = 'block';
                 return;
             }
 
-            const result = await dataManager.registerSale(id, qty, cliente, estado);
+            const result = await dataManager.registerSale(id, qty, cliente, estado, talla);
             if (result.success) {
-                this.showNotification(`Venta registrada: ${qty} x ${item.tipo}`);
+                this.showNotification(`Venta registrada: ${qty} x ${item.tipo} (${talla})`);
                 this.closeSaleModal();
             } else {
                 errorDiv.textContent = "Error: " + result.message;
@@ -497,9 +532,15 @@ class UIController {
                     </div>
                     
                     <div class="card-info">
-                        <div class="info-row">
-                            <span class="info-label">Talla:</span>
-                            <span class="info-value">${item.talla}</span>
+                        <div class="info-row" style="flex-wrap: wrap; height: auto;">
+                            <span class="info-label">Talles:</span>
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;">
+                                ${item.stockPorTalla ? Object.keys(item.stockPorTalla)
+                .filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0)
+                .map(t => `<span class="info-value" style="font-size: 10px; background: rgba(67, 233, 123, 0.1); padding: 2px 6px; border-radius: 4px;" title="Talla ${t} (${dataManager.dataCache.tallaMapping[t]})">${t}: ${item.stockPorTalla[t]}</span>`)
+                .join('') : `<span class="info-value">${item.talla}</span>`
+            }
+                            </div>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Color:</span>
@@ -508,7 +549,7 @@ class UIController {
                     </div>
 
                     <div class="card-stock">
-                        <div class="stock-label">Stock Disponible</div>
+                        <div class="stock-label">Stock Total</div>
                         <div class="stock-value">${item.cantidad}</div>
                         <div class="stock-price">$${item.precio.toFixed(2)}</div>
                     </div>
@@ -560,11 +601,15 @@ class UIController {
         if (item) {
             title.textContent = 'Editar Prenda';
             document.getElementById('itemTipo').value = item.tipo;
-            document.getElementById('itemTalla').value = item.talla;
             document.getElementById('itemColor').value = item.color;
-            document.getElementById('itemCantidad').value = item.cantidad;
             document.getElementById('itemPrecio').value = item.precio;
             document.getElementById('itemCategoria').value = item.categoria;
+
+            // Poblara stock por talla
+            this.sizeStockInputs.forEach(input => {
+                const size = input.dataset.size;
+                input.value = item.stockPorTalla ? (item.stockPorTalla[size] || 0) : (item.talla === size ? item.cantidad : 0);
+            });
 
             // Select color
             const colorBtn = document.querySelector(`[data-color="${item.categoria}"]`);
@@ -572,11 +617,12 @@ class UIController {
         } else {
             title.textContent = 'Nueva Prenda';
             document.getElementById('itemTipo').value = '';
-            document.getElementById('itemTalla').value = 'M';
             document.getElementById('itemColor').value = '';
-            document.getElementById('itemCantidad').value = '';
             document.getElementById('itemPrecio').value = '';
             document.getElementById('itemCategoria').value = 'remeras';
+
+            // Reset stock inputs
+            this.sizeStockInputs.forEach(input => input.value = '');
 
             // Select first color
             const firstColor = document.querySelector('.color-option');
@@ -598,13 +644,19 @@ class UIController {
     }
 
     async saveItem() {
+        // Collect stock por talla
+        const stockPorTalla = {};
+        this.sizeStockInputs.forEach(input => {
+            const val = parseInt(input.value) || 0;
+            if (val > 0) stockPorTalla[input.dataset.size] = val;
+        });
+
         const itemData = {
             tipo: document.getElementById('itemTipo').value.trim(),
-            talla: document.getElementById('itemTalla').value,
             color: document.getElementById('itemColor').value.trim(),
-            cantidad: document.getElementById('itemCantidad').value,
             precio: document.getElementById('itemPrecio').value,
-            categoria: document.getElementById('itemCategoria').value
+            categoria: document.getElementById('itemCategoria').value,
+            stockPorTalla: stockPorTalla
         };
 
         if (!itemData.tipo || !itemData.color) {

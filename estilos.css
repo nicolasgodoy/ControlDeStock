@@ -799,6 +799,99 @@ body.light-mode .modal-content {
     opacity: 0.8;
 }
 
+/* Custom Stepper & Modal Optimization */
+.modal-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.modal-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.stock-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.size-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+}
+
+.stepper {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    width: 100%;
+}
+
+body.light-mode .stepper {
+    background: #f0f2f5;
+    border-color: #ddd;
+}
+
+.btn-step {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background 0.2s;
+}
+
+body.light-mode .btn-step {
+    color: #1a1a2e;
+}
+
+.btn-step:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .btn-step:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.stepper input {
+    width: 100%;
+    text-align: center;
+    background: transparent !important;
+    border: none !important;
+    padding: 5px !important;
+    margin: 0 !important;
+    color: white !important;
+    font-weight: 600;
+    appearance: none;
+    -moz-appearance: textfield;
+}
+
+body.light-mode .stepper input {
+    color: #1a1a2e !important;
+}
+
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .input-hours {
     width: 100%;
     padding: 12px;

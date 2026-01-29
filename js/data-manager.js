@@ -24,7 +24,16 @@ class DataManager {
             inventory: [],
             sales: [],
             notes: [],
-            capitalInvertido: {} // Cambiado a objeto para soportar múltiples meses
+            capitalInvertido: {},
+            tallaMapping: {
+                "XS": "36",
+                "S": "38",
+                "M": "40",
+                "L": "42",
+                "XL": "44",
+                "XXL": "46",
+                "Única": "Única"
+            }
         };
         this.unsubscribe = null;
         this.syncCallbacks = [];
@@ -149,12 +158,21 @@ class DataManager {
     }
 
     async addItem(itemData) {
+        // itemData.stockPorTalla es un objeto: { "M": 10, "L": 5 }
+        const stockPorTalla = itemData.stockPorTalla || {};
+        const totalCantidad = Object.values(stockPorTalla).reduce((a, b) => a + (parseInt(b) || 0), 0);
+
+        // Determinar talla descriptiva para compatibilidad (ej: "M, L")
+        const tallasDisponibles = Object.keys(stockPorTalla).filter(t => (parseInt(stockPorTalla[t]) || 0) > 0);
+        const tallaLabel = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : "Sin stock";
+
         const newItem = {
             id: this.generateId(),
             tipo: itemData.tipo,
-            talla: itemData.talla,
+            talla: tallaLabel, // Etiqueta para vista rápida
+            stockPorTalla: stockPorTalla, // Nuevo campo detallado
             color: itemData.color,
-            cantidad: parseInt(itemData.cantidad) || 0,
+            cantidad: totalCantidad,
             precio: parseFloat(itemData.precio) || 0,
             categoria: itemData.categoria,
             fechaCreacion: new Date().toISOString(),
@@ -170,12 +188,19 @@ class DataManager {
     async updateItem(id, itemData) {
         const index = this.dataCache.inventory.findIndex(item => item.id === id);
         if (index !== -1) {
+            const stockPorTalla = itemData.stockPorTalla || {};
+            const totalCantidad = Object.values(stockPorTalla).reduce((a, b) => a + (parseInt(b) || 0), 0);
+
+            const tallasDisponibles = Object.keys(stockPorTalla).filter(t => (parseInt(stockPorTalla[t]) || 0) > 0);
+            const tallaLabel = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : "Sin stock";
+
             this.dataCache.inventory[index] = {
                 ...this.dataCache.inventory[index],
                 tipo: itemData.tipo,
-                talla: itemData.talla,
+                talla: tallaLabel,
+                stockPorTalla: stockPorTalla,
                 color: itemData.color,
-                cantidad: parseInt(itemData.cantidad) || 0,
+                cantidad: totalCantidad,
                 precio: parseFloat(itemData.precio) || 0,
                 categoria: itemData.categoria,
                 ultimaModificacion: new Date().toISOString()
@@ -234,25 +259,43 @@ class DataManager {
         return [];
     }
 
-    async registerSale(itemId, quantity, cliente = "Consumidor Final", estado = "pagado") {
+    async registerSale(itemId, quantity, cliente = "Consumidor Final", estado = "pagado", tallaSeleccionada = null) {
         const itemIndex = this.dataCache.inventory.findIndex(i => i.id === itemId);
         if (itemIndex === -1) return { success: false, message: "Producto no encontrado" };
 
         const item = this.dataCache.inventory[itemIndex];
-        if (item.cantidad < quantity) {
-            return { success: false, message: "Stock insuficiente" };
+
+        // Verificar stock de la talla específica
+        if (tallaSeleccionada && item.stockPorTalla) {
+            const stockTalla = parseInt(item.stockPorTalla[tallaSeleccionada]) || 0;
+            if (stockTalla < quantity) {
+                return { success: false, message: `Stock insuficiente en talla ${tallaSeleccionada} (disponible: ${stockTalla})` };
+            }
+            // Descontar de la talla específica
+            item.stockPorTalla[tallaSeleccionada] = stockTalla - quantity;
+        } else {
+            // Fallback para items sin stockPorTalla (migrados)
+            if (item.cantidad < quantity) {
+                return { success: false, message: "Stock insuficiente" };
+            }
         }
 
-        // 1. Descontar stock
+        // 1. Descontar stock total
         item.cantidad -= quantity;
         item.ultimaModificacion = new Date().toISOString();
+
+        // Actualizar etiqueta de tallas
+        if (item.stockPorTalla) {
+            const tallasDisponibles = Object.keys(item.stockPorTalla).filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0);
+            item.talla = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : "Sin stock";
+        }
 
         // 2. Registrar venta
         const newSale = {
             id: this.generateId(),
             itemId: item.id,
             producto: item.tipo,
-            talla: item.talla,
+            talla: tallaSeleccionada || item.talla,
             color: item.color,
             cantidad: quantity,
             precioUnitario: item.precio,
@@ -294,8 +337,19 @@ class DataManager {
         if (restoreStock) {
             const itemIndex = this.dataCache.inventory.findIndex(i => i.id === sale.itemId);
             if (itemIndex !== -1) {
-                this.dataCache.inventory[itemIndex].cantidad += sale.cantidad;
-                this.dataCache.inventory[itemIndex].ultimaModificacion = new Date().toISOString();
+                const item = this.dataCache.inventory[itemIndex];
+                item.cantidad += sale.cantidad;
+
+                // Restaurar en la talla específica si existe
+                if (sale.talla && item.stockPorTalla && item.stockPorTalla[sale.talla] !== undefined) {
+                    item.stockPorTalla[sale.talla] = (parseInt(item.stockPorTalla[sale.talla]) || 0) + sale.cantidad;
+
+                    // Actualizar etiqueta tallas
+                    const tallasDisponibles = Object.keys(item.stockPorTalla).filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0);
+                    item.talla = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : "Sin stock";
+                }
+
+                item.ultimaModificacion = new Date().toISOString();
             }
         }
 

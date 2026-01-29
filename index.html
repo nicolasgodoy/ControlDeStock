@@ -396,155 +396,215 @@
                 </span>
             </div>
 
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="itemTipo">Tipo de Prenda:</label>
-                    <input type="text" id="itemTipo" class="input-hours" placeholder="Ej: Remera, Pantalón, Vestido">
-                </div>
-
-                <div class="form-group">
-                    <label for="itemTalla">Talla/Tamaño:</label>
-                    <select id="itemTalla" class="input-hours">
-                        <option value="XS">XS</option>
-                        <option value="S">S</option>
-                        <option value="M" selected>M</option>
-                        <option value="L">L</option>
-                        <option value="XL">XL</option>
-                        <option value="XXL">XXL</option>
-                        <option value="Única">Única</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="itemColor">Color:</label>
-                    <input type="text" id="itemColor" class="input-hours" placeholder="Ej: Azul, Negro, Rojo">
-                </div>
-
-                <div class="form-group">
-                    <label for="itemCantidad">Cantidad en Stock:</label>
-                    <input type="number" id="itemCantidad" class="input-hours" placeholder="0" min="0">
-                </div>
-
-                <div class="form-group">
-                    <label for="itemPrecio">Precio:</label>
-                    <input type="number" id="itemPrecio" class="input-hours" placeholder="0.00" step="0.01" min="0">
-                </div>
-
-                <div class="form-group">
-                    <label>Categoría (Color):</label>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="button" class="color-option" data-color="remeras"
-                            style="width: 30px; height: 30px; background: linear-gradient(to right, #ff5e62, #ff9966); border-radius: 50%; border: 2px solid transparent;"></button>
-                        <button type="button" class="color-option" data-color="pantalones"
-                            style="width: 30px; height: 30px; background: linear-gradient(to right, #56CCF2, #2F80ED); border-radius: 50%; border: 2px solid transparent;"></button>
-                        <button type="button" class="color-option" data-color="vestidos"
-                            style="width: 30px; height: 30px; background: linear-gradient(to right, #ff0844, #ffb199); border-radius: 50%; border: 2px solid transparent;"></button>
-                        <button type="button" class="color-option" data-color="accesorios"
-                            style="width: 30px; height: 30px; background: linear-gradient(to right, #43e97b, #38f9d7); border-radius: 50%; border: 2px solid transparent;"></button>
-                        <button type="button" class="color-option" data-color="calzado"
-                            style="width: 30px; height: 30px; background: linear-gradient(to right, #a18cd1, #fbc2eb); border-radius: 50%; border: 2px solid transparent;"></button>
-                        <button type="button" class="color-option" data-color="otros"
-                            style="width: 30px; height: 30px; background: linear-gradient(to right, #f6d365, #fda085); border-radius: 50%; border: 2px solid transparent;"></button>
+            <div class="modal-body" style="padding: 20px 25px;">
+                <div class="modal-row">
+                    <div class="form-group">
+                        <label for="itemTipo">Tipo de Prenda:</label>
+                        <input type="text" id="itemTipo" class="input-hours" placeholder="Ej: Remera, Pantalón">
                     </div>
-                    <input type="hidden" id="itemCategoria" value="remeras">
+                    <div class="form-group">
+                        <label for="itemColor">Color:</label>
+                        <input type="text" id="itemColor" class="input-hours" placeholder="Ej: Azul, Rojo">
+                    </div>
                 </div>
-            </div>
 
-            <div class="modal-footer">
-                <button id="btnCancelItem" class="btn-modal btn-cancel">Cancelar</button>
-                <button id="btnSaveItem" class="btn-modal btn-save">Guardar</button>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Stock por Tallas:</label>
+                    <div id="stockPorTallaContainer" class="stock-grid">
+                        <!-- XS (36) -->
+                        <div class="size-input-group">
+                            <label style="font-size: 11px; color: #94a3b8;">XS (36)</label>
+                            <div class="stepper">
+                                <button type="button" class="btn-step minus" data-size="XS">−</button>
+                                <input type="number" data-size="XS" class="size-stock-input" value="0" min="0">
+                                <button type="button" class="btn-step plus" data-size="XS">+</button>
+                            </div>
+                        </div>
+                        <!-- S (38) -->
+                        <div class="size-input-group">
+                            <label style="font-size: 11px; color: #94a3b8;">S (38)</label>
+                            <div class="stepper">
+                                <button type="button" class="btn-step minus" data-size="S">−</button>
+                                <input type="number" data-size="S" class="size-stock-input" value="0" min="0">
+                                <button type="button" class="btn-step plus" data-size="S">+</button>
+                            </div>
+                        </div>
+                        <!-- M (40) -->
+                        <div class="size-input-group">
+                            <label style="font-size: 11px; color: #94a3b8;">M (40)</label>
+                            <div class="stepper">
+                                <button type="button" class="btn-step minus" data-size="M">−</button>
+                                <input type="number" data-size="M" class="size-stock-input" value="0" min="0">
+                                <button type="button" class="btn-step plus" data-size="M">+</button>
+                            </div>
+                        </div>
+                        <!-- L (42) -->
+                        <div class="size-input-group">
+                            <label style="font-size: 11px; color: #94a3b8;">L (42)</label>
+                            <div class="stepper">
+                                <button type="button" class="btn-step minus" data-size="L">−</button>
+                                <input type="number" data-size="L" class="size-stock-input" value="0" min="0">
+                                <button type="button" class="btn-step plus" data-size="L">+</button>
+                            </div>
+                        </div>
+                        <!-- XL (44) -->
+                        <div class="size-input-group">
+                            <label style="font-size: 11px; color: #94a3b8;">XL (44)</label>
+                            <div class="stepper">
+                                <button type="button" class="btn-step minus" data-size="XL">−</button>
+                                <input type="number" data-size="XL" class="size-stock-input" value="0" min="0">
+                                <button type="button" class="btn-step plus" data-size="XL">+</button>
+                            </div>
+                        </div>
+                        <!-- XXL (46) -->
+                        <div class="size-input-group">
+                            <label style="font-size: 11px; color: #94a3b8;">XXL (46)</label>
+                            <div class="stepper">
+                                <button type="button" class="btn-step minus" data-size="XXL">−</button>
+                                <input type="number" data-size="XXL" class="size-stock-input" value="0" min="0">
+                                <button type="button" class="btn-step plus" data-size="XXL">+</button>
+                            </div>
+                        </div>
+                        <!-- Única -->
+                        <div class="size-input-group"
+                            style="grid-column: span 3; margin-top: 5px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <label style="font-size: 11px; color: #94a3b8;">Talla Única</label>
+                            <div class="stepper" style="max-width: 150px; margin: 0 auto;">
+                                <button type="button" class="btn-step minus" data-size="Única">−</button>
+                                <input type="number" data-size="Única" class="size-stock-input" value="0" min="0">
+                                <button type="button" class="btn-step plus" data-size="Única">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-row">
+                    <div class="form-group">
+                        <label for="itemPrecio">Precio:</label>
+                        <input type="number" id="itemPrecio" class="input-hours" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría:</label>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" class="color-option" data-color="remeras"
+                                style="width: 25px; height: 25px; background: linear-gradient(to right, #ff5e62, #ff9966); border-radius: 50%; border: 2px solid transparent;"></button>
+                            <button type="button" class="color-option" data-color="pantalones"
+                                style="width: 25px; height: 25px; background: linear-gradient(to right, #56CCF2, #2F80ED); border-radius: 50%; border: 2px solid transparent;"></button>
+                            <button type="button" class="color-option" data-color="vestidos"
+                                style="width: 25px; height: 25px; background: linear-gradient(to right, #ff0844, #ffb199); border-radius: 50%; border: 2px solid transparent;"></button>
+                            <button type="button" class="color-option" data-color="accesorios"
+                                style="width: 25px; height: 25px; background: linear-gradient(to right, #43e97b, #38f9d7); border-radius: 50%; border: 2px solid transparent;"></button>
+                            <button type="button" class="color-option" data-color="calzado"
+                                style="width: 25px; height: 25px; background: linear-gradient(to right, #a18cd1, #fbc2eb); border-radius: 50%; border: 2px solid transparent;"></button>
+                            <button type="button" class="color-option" data-color="otros"
+                                style="width: 25px; height: 25px; background: linear-gradient(to right, #f6d365, #fda085); border-radius: 50%; border: 2px solid transparent;"></button>
+                        </div>
+                        <input type="hidden" id="itemCategoria" value="remeras">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="btnCancelItem" class="btn-modal btn-cancel">Cancelar</button>
+                    <button id="btnSaveItem" class="btn-modal btn-save">Guardar</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal de Confirmación Genérico -->
-    <div id="confirmModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #1c204b, #2d3478);">
-                <h2 id="confirmTitle">Confirmar Acción</h2>
-            </div>
-            <div class="modal-body" style="text-align: center;">
-                <p id="confirmMessage" style="margin-bottom: 20px; line-height: 1.5; color: #eee;"></p>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button id="btnConfirmCancel" class="btn-modal btn-cancel" style="flex: 1;">Cancelar</button>
-                    <button id="btnConfirmOk" class="btn-modal btn-save" style="flex: 1;">Aceptar</button>
+        <!-- Modal de Confirmación Genérico -->
+        <div id="confirmModal" class="modal">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1c204b, #2d3478);">
+                    <h2 id="confirmTitle">Confirmar Acción</h2>
+                </div>
+                <div class="modal-body" style="text-align: center;">
+                    <p id="confirmMessage" style="margin-bottom: 20px; line-height: 1.5; color: #eee;"></p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button id="btnConfirmCancel" class="btn-modal btn-cancel" style="flex: 1;">Cancelar</button>
+                        <button id="btnConfirmOk" class="btn-modal btn-save" style="flex: 1;">Aceptar</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal de Vender (Input rápido) -->
-    <div id="saleModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header">
-                <h2>📦 Registrar Venta</h2>
-                <span class="modal-close" id="closeSaleModal">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </span>
-            </div>
-            <div class="modal-body">
-                <div id="saleItemInfo"
-                    style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                    <!-- Info del item inyectada por JS -->
+        <!-- Modal de Vender (Input rápido) -->
+        <div id="saleModal" class="modal">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2>📦 Registrar Venta</h2>
+                    <span class="modal-close" id="closeSaleModal">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </span>
                 </div>
-                <div class="form-group">
-                    <label for="saleCustomer">Nombre del Cliente:</label>
-                    <input type="text" id="saleCustomer" class="input-hours" placeholder="Nombre completo">
-                </div>
-                <div class="form-group">
-                    <label for="saleStatus">Estado del Pago:</label>
-                    <select id="saleStatus" class="input-hours">
-                        <option value="pagado" style="color: #44d16e;">Pagado (Total)</option>
-                        <option value="deuda" style="color: #ff3366;">Deuda (Pendiente)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="saleQuantity">Cantidad a vender:</label>
-                    <input type="number" id="saleQuantity" class="input-hours" value="1" min="1">
-                </div>
-                <div id="saleError"
-                    style="color: #ff3366; font-size: 13px; margin-bottom: 15px; text-align: center; display: none;">
-                </div>
-                <button id="btnConfirmSale" class="btn-modal btn-save" style="width: 100%; height: 45px;">Confirmar
-                    Venta</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Editar Capital -->
-    <div id="capitalModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header">
-                <h2>💰 Editar Capital</h2>
-                <span class="modal-close" id="closeCapitalModal">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="capitalInput">Monto Invertido Total:</label>
-                    <input type="number" id="capitalInput" class="input-hours" placeholder="0.00" step="0.01" min="0">
-                    <p style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
-                        Este valor se usa para calcular la ganancia neta respecto a las ventas totales.
-                    </p>
-                </div>
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button id="btnCancelCapital" class="btn-modal btn-cancel" style="flex: 1;">Cancelar</button>
-                    <button id="btnSaveCapital" class="btn-modal btn-save" style="flex: 1;">Guardar</button>
+                <div class="modal-body">
+                    <div id="saleItemInfo"
+                        style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        <!-- Info del item inyectada por JS -->
+                    </div>
+                    <div class="form-group">
+                        <label for="saleCustomer">Nombre del Cliente:</label>
+                        <input type="text" id="saleCustomer" class="input-hours" placeholder="Nombre completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="saleStatus">Estado del Pago:</label>
+                        <select id="saleStatus" class="input-hours">
+                            <option value="pagado" style="color: #44d16e;">Pagado (Total)</option>
+                            <option value="deuda" style="color: #ff3366;">Deuda (Pendiente)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="saleTalla">Seleccionar Talla:</label>
+                        <select id="saleTalla" class="input-hours">
+                            <!-- Opciones inyectadas por JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="saleQuantity">Cantidad a vender:</label>
+                        <input type="number" id="saleQuantity" class="input-hours" value="1" min="1">
+                    </div>
+                    <div id="saleError"
+                        style="color: #ff3366; font-size: 13px; margin-bottom: 15px; text-align: center; display: none;">
+                    </div>
+                    <button id="btnConfirmSale" class="btn-modal btn-save" style="width: 100%; height: 45px;">Confirmar
+                        Venta</button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script type="module" src="./js/app.js"></script>
+        <!-- Modal Editar Capital -->
+        <div id="capitalModal" class="modal">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2>💰 Editar Capital</h2>
+                    <span class="modal-close" id="closeCapitalModal">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="capitalInput">Monto Invertido Total:</label>
+                        <input type="number" id="capitalInput" class="input-hours" placeholder="0.00" step="0.01"
+                            min="0">
+                        <p style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
+                            Este valor se usa para calcular la ganancia neta respecto a las ventas totales.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button id="btnCancelCapital" class="btn-modal btn-cancel" style="flex: 1;">Cancelar</button>
+                        <button id="btnSaveCapital" class="btn-modal btn-save" style="flex: 1;">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="./js/app.js"></script>
 
 </body>
 
