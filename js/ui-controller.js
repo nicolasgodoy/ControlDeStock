@@ -166,6 +166,27 @@ class UIController {
 
         this.btnConfirmCancel.addEventListener('click', () => this.closeConfirm());
 
+        // Event Delegation para el Inventario (más robusto)
+        this.inventoryGrid.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-edit-id], button[data-delete-id], button[data-sell-id]');
+            if (!btn) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const editId = btn.getAttribute('data-edit-id');
+            const deleteId = btn.getAttribute('data-delete-id');
+            const sellId = btn.getAttribute('data-sell-id');
+
+            if (editId) {
+                this.editItem(editId);
+            } else if (deleteId) {
+                this.deleteItem(deleteId);
+            } else if (sellId) {
+                this.quickSell(sellId);
+            }
+        });
+
         // Data Sync
         dataManager.onDataSync((data) => {
             this.renderInventory(data.inventory);
@@ -360,8 +381,13 @@ class UIController {
     }
 
     async quickSell(id) {
-        const item = dataManager.dataCache.inventory.find(i => i.id === id);
-        if (!item) return;
+        // Asegurar que el ID sea string y buscar el item
+        const itemId = String(id);
+        const item = dataManager.dataCache.inventory.find(i => String(i.id) === itemId);
+        if (!item) {
+            console.error("Item no encontrado para venta:", itemId);
+            return;
+        }
 
         // Reset and Clear Modal
         this.saleQuantityInput.value = 1;
@@ -387,11 +413,15 @@ class UIController {
             <div style="font-size: 13px; color: #20e2d7; margin-top: 3px;">Stock total: ${item.cantidad}</div>
         `;
 
+        this.closeAllModals();
         this.saleModal.style.display = 'flex';
+        this.saleModal.style.zIndex = '1010';
         this.saleQuantityInput.focus();
 
-        // One-time listener for the confirm button
-        const confirmBtn = this.btnConfirmSale;
+        // Limpiar y re-vincular botón de confirmación
+        const confirmBtn = document.getElementById('btnConfirmSale');
+        if (!confirmBtn) return;
+
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
         this.btnConfirmSale = newConfirmBtn;
@@ -473,7 +503,10 @@ class UIController {
     showConfirm(title, message, onOk) {
         this.confirmTitle.textContent = title;
         this.confirmMessage.innerHTML = message;
+
+        this.closeAllModals();
         this.confirmModal.style.display = 'flex';
+        this.confirmModal.style.zIndex = '1020'; // Más alto que otros modales por si acaso
 
         // Reemplazar el botón para limpiar listeners viejos
         const oldOkBtn = this.btnConfirmOk;
@@ -489,6 +522,13 @@ class UIController {
 
     closeConfirm() {
         this.confirmModal.style.display = 'none';
+    }
+
+    closeAllModals() {
+        const modals = ['loginModal', 'itemModal', 'saleModal', 'confirmModal', 'capitalModal'];
+        modals.forEach(m => {
+            if (this[m]) this[m].style.display = 'none';
+        });
     }
 
     // --- INVENTARIO ---
@@ -509,17 +549,6 @@ class UIController {
 
         // Actualizar estadísticas cada vez que el inventario cambie
         this.updateStats();
-
-        // Attach event listeners to cards
-        items.forEach(item => {
-            const editBtn = document.querySelector(`[data-edit-id="${item.id}"]`);
-            const deleteBtn = document.querySelector(`[data-delete-id="${item.id}"]`);
-            const sellBtn = document.querySelector(`[data-sell-id="${item.id}"]`);
-
-            if (editBtn) editBtn.addEventListener('click', () => this.editItem(item.id));
-            if (deleteBtn) deleteBtn.addEventListener('click', () => this.deleteItem(item.id));
-            if (sellBtn) sellBtn.addEventListener('click', () => this.quickSell(item.id));
-        });
     }
 
     createItemCard(item) {
@@ -629,7 +658,10 @@ class UIController {
             if (firstColor) this.selectColor(firstColor);
         }
 
+        this.closeAllModals();
         this.itemModal.style.display = 'flex';
+        this.itemModal.style.zIndex = '1010'; // Asegurar que esté al frente
+        this.itemModal.querySelector('.input-hours')?.focus();
     }
 
     closeItemModal() {
@@ -684,7 +716,8 @@ class UIController {
     }
 
     async deleteItem(id) {
-        const item = dataManager.dataCache.inventory.find(i => i.id === id);
+        const itemId = String(id);
+        const item = dataManager.dataCache.inventory.find(i => String(i.id) === itemId);
         if (!item) return;
 
         this.showConfirm(
@@ -797,6 +830,7 @@ class UIController {
             capitalTitle.textContent = monthFilter !== "general" ? `💰 Capital - ${monthFilter}` : '💰 Editar Capital';
         }
 
+        this.closeAllModals();
         this.capitalModal.style.display = 'flex';
         this.capitalInput.focus();
     }
