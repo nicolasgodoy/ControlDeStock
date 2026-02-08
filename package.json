@@ -1,0 +1,12 @@
+{
+    "name": "app-control-stock",
+    "version": "1.0.0",
+    "description": "Stock Control Application with Obfuscated JS",
+    "main": "js/app.js",
+    "scripts": {
+        "build": "javascript-obfuscator src --output js --compact true"
+    },
+    "devDependencies": {
+        "javascript-obfuscator": "^4.2.2"
+    }
+}

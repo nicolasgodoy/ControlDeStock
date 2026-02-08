@@ -1,9 +1,1 @@
-import dataManager from './data-manager.js';
-import uiController from './ui-controller.js';
-
-// Inicializar la aplicación
-console.log('🚀 Control de Stock - Aplicación iniciada');
-
-// La aplicación está lista
-// El login modal se muestra automáticamente
-// Después del login, se cargarán los datos automáticamente
+var a0_0x215c99=a0_0x7f03;function a0_0x1200(){var _0x5caf96=['78420jFLQrG','🚀\x20Control\x20de\x20Stock\x20-\x20Aplicación\x20iniciada','9725013hkRPFC','log','7679944YqQZml','1103878oxxLoW','8834049QjvSwh','2nWdXYm','4598ZScFva','10jrbDoe','3877956xLdSlb','172bLQhrm','77100jAWJCi','10cpxgcb'];a0_0x1200=function(){return _0x5caf96;};return a0_0x1200();}function a0_0x7f03(_0x488c03,_0x5bd0ec){_0x488c03=_0x488c03-0x1b5;var _0x12008=a0_0x1200();var _0x7f0300=_0x12008[_0x488c03];return _0x7f0300;}(function(_0x3736b5,_0x80c9f7){var _0x51117d=a0_0x7f03,_0x59e26f=_0x3736b5();while(!![]){try{var _0x3ebbd4=-parseInt(_0x51117d(0x1ba))/0x1*(parseInt(_0x51117d(0x1bc))/0x2)+-parseInt(_0x51117d(0x1c1))/0x3*(-parseInt(_0x51117d(0x1c0))/0x4)+-parseInt(_0x51117d(0x1c2))/0x5*(-parseInt(_0x51117d(0x1bf))/0x6)+-parseInt(_0x51117d(0x1bb))/0x7+-parseInt(_0x51117d(0x1b9))/0x8+parseInt(_0x51117d(0x1b7))/0x9*(-parseInt(_0x51117d(0x1be))/0xa)+parseInt(_0x51117d(0x1bd))/0xb*(parseInt(_0x51117d(0x1b5))/0xc);if(_0x3ebbd4===_0x80c9f7)break;else _0x59e26f['push'](_0x59e26f['shift']());}catch(_0x5c16ef){_0x59e26f['push'](_0x59e26f['shift']());}}}(a0_0x1200,0xb0803));import a0_0x433caf from'./data-manager.js';import a0_0x53c672 from'./ui-controller.js';console[a0_0x215c99(0x1b8)](a0_0x215c99(0x1b6));
