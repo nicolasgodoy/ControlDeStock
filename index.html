@@ -133,6 +133,15 @@
                             <span class="stats-label">Ventas Totales:</span>
                             <span id="totalSalesAmount" class="stats-value" style="color: #43e97b;">$0.00</span>
                         </div>
+                        <div class="sidebar-divider" style="margin: 15px 0;"></div>
+                        <div class="stats-row" style="opacity: 0.9;">
+                            <span class="stats-label">Prendas Mes:</span>
+                            <span id="totalItemsMonth" class="stats-value">0</span>
+                        </div>
+                        <div class="stats-row" style="opacity: 0.9;">
+                            <span class="stats-label">Stock Mes:</span>
+                            <span id="totalStockMonth" class="stats-value accent">0</span>
+                        </div>
                     </div>
                 </div>
 
@@ -183,11 +192,28 @@
                         <input type="text" id="searchInput" class="input-hours"
                             placeholder="Buscar por tipo, color, talla..." style="width: 100%; padding-left: 42px;">
                     </div>
+                    <label for="inventoryMonthFilter" class="filter-label-group"
+                        style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #94a3b8; font-size: 13px;">Mes:</span>
+                        <input type="month" id="inventoryMonthFilter" class="input-hours" style="width: auto;"
+                            onclick="this.showPicker()">
+                        <button type="button" id="clearMonthFilter" class="btn-step" title="Ver Histórico (Todo)"
+                            style="width: 24px; height: 24px; font-size: 12px; margin-left: -5px;">×</button>
+                    </label>
                     <select id="filterCategory" class="input-hours" style="width: auto;">
                         <option value="">Todas las categorías</option>
                         <option value="remeras">Remeras</option>
+                        <option value="musculosas">Musculosas</option>
                         <option value="pantalones">Pantalones</option>
+                        <option value="palazos">Palazos</option>
+                        <option value="monos">Monos</option>
+                        <option value="shorts">Shorts</option>
+                        <option value="polleras">Polleras</option>
                         <option value="vestidos">Vestidos</option>
+                        <option value="abrigos">Abrigos</option>
+                        <option value="sudaderas">Sudaderas</option>
+                        <option value="conjuntos">Conjuntos</option>
+                        <option value="medias">Medias</option>
                         <option value="accesorios">Accesorios</option>
                         <option value="calzado">Calzado</option>
                         <option value="otros">Otros</option>
@@ -396,114 +422,190 @@
                 </span>
             </div>
 
-            <div class="modal-body" style="padding: 20px 25px;">
-                <div class="modal-row">
-                    <div class="form-group">
-                        <label for="itemTipo">Tipo de Prenda:</label>
-                        <input type="text" id="itemTipo" class="input-hours" placeholder="Ej: Remera, Pantalón">
-                    </div>
-                    <div class="form-group">
-                        <label for="itemColor">Color:</label>
-                        <input type="text" id="itemColor" class="input-hours" placeholder="Ej: Azul, Rojo">
-                    </div>
-                </div>
+            <!-- Body (Scrollable) -->
+            <div class="modal-body">
+                <div style="display: flex; gap: 30px; flex-wrap: wrap;">
 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Stock por Tallas:</label>
-                    <div id="stockPorTallaContainer" class="stock-grid">
-                        <!-- XS (36) -->
-                        <div class="size-input-group">
-                            <label style="font-size: 11px; color: #94a3b8;">XS (36)</label>
-                            <div class="stepper">
-                                <button type="button" class="btn-step minus" data-size="XS">−</button>
-                                <input type="number" data-size="XS" class="size-stock-input" value="0" min="0">
-                                <button type="button" class="btn-step plus" data-size="XS">+</button>
+                    <!-- Left Column: Info & Category -->
+                    <div style="flex: 1; min-width: 350px; display: flex; flex-direction: column; gap: 20px;">
+                        <div class="modal-row" style="flex-direction: column; gap: 15px;">
+                            <div class="form-group">
+                                <label for="itemTipo">Tipo de Prenda:</label>
+                                <input type="text" id="itemTipo" class="input-hours"
+                                    placeholder="Ej: Remera, Jean, etc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="itemColor">Color/Descripción:</label>
+                                <input type="text" id="itemColor" class="input-hours"
+                                    placeholder="Ej: Negro, Azul, etc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="itemPrecio">Precio:</label>
+                                <input type="text" id="itemPrecio" class="input-hours" placeholder="Ej: 10.000 o 10000"
+                                    inputmode="decimal">
                             </div>
                         </div>
-                        <!-- S (38) -->
-                        <div class="size-input-group">
-                            <label style="font-size: 11px; color: #94a3b8;">S (38)</label>
-                            <div class="stepper">
-                                <button type="button" class="btn-step minus" data-size="S">−</button>
-                                <input type="number" data-size="S" class="size-stock-input" value="0" min="0">
-                                <button type="button" class="btn-step plus" data-size="S">+</button>
-                            </div>
-                        </div>
-                        <!-- M (40) -->
-                        <div class="size-input-group">
-                            <label style="font-size: 11px; color: #94a3b8;">M (40)</label>
-                            <div class="stepper">
-                                <button type="button" class="btn-step minus" data-size="M">−</button>
-                                <input type="number" data-size="M" class="size-stock-input" value="0" min="0">
-                                <button type="button" class="btn-step plus" data-size="M">+</button>
-                            </div>
-                        </div>
-                        <!-- L (42) -->
-                        <div class="size-input-group">
-                            <label style="font-size: 11px; color: #94a3b8;">L (42)</label>
-                            <div class="stepper">
-                                <button type="button" class="btn-step minus" data-size="L">−</button>
-                                <input type="number" data-size="L" class="size-stock-input" value="0" min="0">
-                                <button type="button" class="btn-step plus" data-size="L">+</button>
-                            </div>
-                        </div>
-                        <!-- XL (44) -->
-                        <div class="size-input-group">
-                            <label style="font-size: 11px; color: #94a3b8;">XL (44)</label>
-                            <div class="stepper">
-                                <button type="button" class="btn-step minus" data-size="XL">−</button>
-                                <input type="number" data-size="XL" class="size-stock-input" value="0" min="0">
-                                <button type="button" class="btn-step plus" data-size="XL">+</button>
-                            </div>
-                        </div>
-                        <!-- XXL (46) -->
-                        <div class="size-input-group">
-                            <label style="font-size: 11px; color: #94a3b8;">XXL (46)</label>
-                            <div class="stepper">
-                                <button type="button" class="btn-step minus" data-size="XXL">−</button>
-                                <input type="number" data-size="XXL" class="size-stock-input" value="0" min="0">
-                                <button type="button" class="btn-step plus" data-size="XXL">+</button>
-                            </div>
-                        </div>
-                        <!-- Única -->
-                        <div class="size-input-group"
-                            style="grid-column: span 3; margin-top: 5px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <label style="font-size: 11px; color: #94a3b8;">Talla Única</label>
-                            <div class="stepper" style="max-width: 150px; margin: 0 auto;">
-                                <button type="button" class="btn-step minus" data-size="Única">−</button>
-                                <input type="number" data-size="Única" class="size-stock-input" value="0" min="0">
-                                <button type="button" class="btn-step plus" data-size="Única">+</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="modal-row">
-                    <div class="form-group">
-                        <label for="itemPrecio">Precio:</label>
-                        <input type="text" id="itemPrecio" class="input-hours" placeholder="Ej: 10.000 o 10000" inputmode="decimal">
-                    </div>
-                    <div class="form-group">
-                        <label>Categoría:</label>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button type="button" class="color-option" data-color="remeras"
-                                style="width: 25px; height: 25px; background: linear-gradient(to right, #ff5e62, #ff9966); border-radius: 50%; border: 2px solid transparent;"></button>
-                            <button type="button" class="color-option" data-color="pantalones"
-                                style="width: 25px; height: 25px; background: linear-gradient(to right, #56CCF2, #2F80ED); border-radius: 50%; border: 2px solid transparent;"></button>
-                            <button type="button" class="color-option" data-color="vestidos"
-                                style="width: 25px; height: 25px; background: linear-gradient(to right, #ff0844, #ffb199); border-radius: 50%; border: 2px solid transparent;"></button>
-                            <button type="button" class="color-option" data-color="accesorios"
-                                style="width: 25px; height: 25px; background: linear-gradient(to right, #43e97b, #38f9d7); border-radius: 50%; border: 2px solid transparent;"></button>
-                            <button type="button" class="color-option" data-color="calzado"
-                                style="width: 25px; height: 25px; background: linear-gradient(to right, #a18cd1, #fbc2eb); border-radius: 50%; border: 2px solid transparent;"></button>
-                            <button type="button" class="color-option" data-color="otros"
-                                style="width: 25px; height: 25px; background: linear-gradient(to right, #f6d365, #fda085); border-radius: 50%; border: 2px solid transparent;"></button>
+                        <div class="form-group">
+                            <label style="margin-bottom: 15px; display: block;">Seleccionar Categoría:</label>
+                            <div class="category-chips-grid">
+                                <div class="category-chip" data-color="remeras">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff5e62, #ff9966);"></span>
+                                    <span class="chip-label">Remeras</span>
+                                </div>
+                                <div class="category-chip" data-color="musculosas">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff9a9e, #fad0c4);"></span>
+                                    <span class="chip-label">Musculosas</span>
+                                </div>
+                                <div class="category-chip" data-color="pantalones">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #56CCF2, #2F80ED);"></span>
+                                    <span class="chip-label">Pantalones</span>
+                                </div>
+                                <div class="category-chip" data-color="palazos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #4facfe, #00f2fe);"></span>
+                                    <span class="chip-label">Palazos</span>
+                                </div>
+                                <div class="category-chip" data-color="monos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #667eea, #764ba2);"></span>
+                                    <span class="chip-label">Monos</span>
+                                </div>
+                                <div class="category-chip" data-color="shorts">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #f093fb, #f5576c);"></span>
+                                    <span class="chip-label">Shorts</span>
+                                </div>
+                                <div class="category-chip" data-color="polleras">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff0844, #ffb199);"></span>
+                                    <span class="chip-label">Polleras</span>
+                                </div>
+                                <div class="category-chip" data-color="vestidos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #6a11cb, #2575fc);"></span>
+                                    <span class="chip-label">Vestidos</span>
+                                </div>
+                                <div class="category-chip" data-color="abrigos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #30cfd0, #330867);"></span>
+                                    <span class="chip-label">Abrigos</span>
+                                </div>
+                                <div class="category-chip" data-color="sudaderas">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #434343, #000000);"></span>
+                                    <span class="chip-label">Sudaderas</span>
+                                </div>
+                                <div class="category-chip" data-color="conjuntos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #309108, #fdcbf1);"></span>
+                                    <span class="chip-label">Conjuntos</span>
+                                </div>
+                                <div class="category-chip" data-color="medias">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff9a9e, #fecfef);"></span>
+                                    <span class="chip-label">Medias</span>
+                                </div>
+                                <div class="category-chip" data-color="accesorios">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #43e97b, #38f9d7);"></span>
+                                    <span class="chip-label">Accesorios</span>
+                                </div>
+                                <div class="category-chip" data-color="calzado">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #a18cd1, #fbc2eb);"></span>
+                                    <span class="chip-label">Calzado</span>
+                                </div>
+                                <div class="category-chip" data-color="otros">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #f6d365, #fda085);"></span>
+                                    <span class="chip-label">Otros</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="itemCategoria" value="remeras">
                         </div>
-                        <input type="hidden" id="itemCategoria" value="remeras">
+                    </div>
+
+                    <!-- Right Column: Sizes -->
+                    <div
+                        style="flex: 1; min-width: 350px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05);">
+                        <label
+                            style="display: block; margin-bottom: 20px; font-weight: 700; color: #43e97b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Control
+                            de Stock por Talle:</label>
+                        <div class="size-stock-grid" style="grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                            <!-- XS (36) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">XS (36)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="XS">−</button>
+                                    <input type="number" data-size="XS" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="XS">+</button>
+                                </div>
+                            </div>
+                            <!-- S (38) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">S (38)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="S">−</button>
+                                    <input type="number" data-size="S" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="S">+</button>
+                                </div>
+                            </div>
+                            <!-- M (40) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">M (40)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="M">−</button>
+                                    <input type="number" data-size="M" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="M">+</button>
+                                </div>
+                            </div>
+                            <!-- L (42) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">L (42)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="L">−</button>
+                                    <input type="number" data-size="L" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="L">+</button>
+                                </div>
+                            </div>
+                            <!-- XL (44) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">XL (44)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="XL">−</button>
+                                    <input type="number" data-size="XL" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="XL">+</button>
+                                </div>
+                            </div>
+                            <!-- XXL (46) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">XXL (46)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="XXL">−</button>
+                                    <input type="number" data-size="XXL" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="XXL">+</button>
+                                </div>
+                            </div>
+                            <!-- Única -->
+                            <div class="size-input-group"
+                                style="grid-column: span 2; margin-top: 10px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <label style="font-size: 12px; color: #43e97b; font-weight: 600;">Talla Única</label>
+                                <div class="stepper" style="margin-top: 5px;">
+                                    <button type="button" class="btn-step minus" data-size="Única">−</button>
+                                    <input type="number" data-size="Única" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="Única">+</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Footer -->
             <div class="modal-footer">
                 <button id="btnCancelItem" class="btn-modal btn-cancel">Cancelar</button>
                 <button id="btnSaveItem" class="btn-modal btn-save">Guardar</button>

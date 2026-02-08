@@ -6,6 +6,7 @@ class UIController {
         this.initializeElements();
         this.attachEventListeners();
         this.loadTheme();
+        this.checkSession();
     }
 
     initializeElements() {
@@ -41,6 +42,8 @@ class UIController {
         // Stats
         this.totalItems = document.getElementById('totalItems');
         this.totalStock = document.getElementById('totalStock');
+        this.totalItemsMonth = document.getElementById('totalItemsMonth');
+        this.totalStockMonth = document.getElementById('totalStockMonth');
         this.currentUserDisplay = document.getElementById('currentUserDisplay');
         this.userName = document.getElementById('userName');
         this.userInitialLetter = document.getElementById('userInitialLetter');
@@ -82,6 +85,24 @@ class UIController {
         this.salesPerPage = 10;
         this.activeTab = 'inventory';
         this.sizeStockInputs = document.querySelectorAll('.size-stock-input');
+
+        // New Elements
+        this.inventoryMonthFilter = document.getElementById('inventoryMonthFilter');
+        this.setInitialMonth();
+    }
+
+    setInitialMonth() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const currentMonth = `${year}-${month}`;
+
+        if (this.inventoryMonthFilter) {
+            this.inventoryMonthFilter.value = currentMonth;
+        }
+        if (this.balanceMonthFilter) {
+            this.balanceMonthFilter.value = currentMonth;
+        }
     }
 
     attachEventListeners() {
@@ -111,8 +132,31 @@ class UIController {
         // Search & Filter
         this.searchInput.addEventListener('input', () => this.filterInventory());
         this.filterCategory.addEventListener('change', () => this.filterInventory());
-        this.salesFilterDate.addEventListener('change', () => this.renderSales());
-        this.salesSearchInput.addEventListener('input', () => this.renderSales());
+        if (this.inventoryMonthFilter) {
+            this.inventoryMonthFilter.addEventListener('change', () => this.filterInventory());
+        }
+        const clearBtn = document.getElementById('clearMonthFilter');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                this.inventoryMonthFilter.value = '';
+                this.filterInventory();
+            });
+        }
+        // Color selection
+        document.addEventListener('click', (e) => {
+            const chip = e.target.closest('.category-chip');
+            if (chip) this.selectCategoryChip(chip);
+        });
+
+        // Notes and focus
+        this.salesFilterDate.addEventListener('change', () => {
+            this.currentSalesPage = 1;
+            this.renderSales();
+        });
+        this.salesSearchInput.addEventListener('input', () => {
+            this.currentSalesPage = 1;
+            this.renderSales();
+        });
         this.balanceMonthFilter.addEventListener('change', () => this.renderBalance());
         this.btnEditCapital.addEventListener('click', () => this.handleEditCapital());
 
@@ -122,9 +166,6 @@ class UIController {
         document.getElementById('btnSaveItem').addEventListener('click', () => this.saveItem());
 
         // Color Selector
-        document.querySelectorAll('.color-option').forEach(btn => {
-            btn.addEventListener('click', (e) => this.selectColor(e.target));
-        });
 
         // Notes
         document.getElementById('btnAddNote').addEventListener('click', () => this.addNote());
@@ -212,6 +253,10 @@ class UIController {
         const result = await dataManager.login(username, token);
 
         if (result.success) {
+            // Guardar sesión
+            localStorage.setItem('stock_user', username);
+            localStorage.setItem('stock_token', token);
+
             this.loginModal.style.display = 'none';
             this.mainApp.style.display = 'block';
             this.currentUserDisplay.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> <span class="hide-mobile">${username}</span>`;
@@ -230,8 +275,29 @@ class UIController {
         }
     }
 
+    async checkSession() {
+        const username = localStorage.getItem('stock_user');
+        const token = localStorage.getItem('stock_token');
+
+        if (username && token) {
+            const result = await dataManager.login(username, token);
+            if (result.success) {
+                this.loginModal.style.display = 'none';
+                this.mainApp.style.display = 'block';
+                this.currentUserDisplay.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> <span class="hide-mobile">${username}</span>`;
+                this.userName.textContent = username;
+                if (this.userInitialLetter) this.userInitialLetter.textContent = username.charAt(0).toUpperCase();
+                await this.loadData();
+            }
+        }
+    }
+
     handleLogout() {
         if (confirm('¿Seguro que deseas cerrar sesión?')) {
+            // Limpiar localStorage
+            localStorage.removeItem('stock_user');
+            localStorage.removeItem('stock_token');
+
             dataManager.logout();
             this.loginModal.style.display = 'flex';
             this.mainApp.style.display = 'none';
@@ -250,9 +316,10 @@ class UIController {
         const sales = await dataManager.getSales();
         const notes = await dataManager.getNotes();
 
-        this.renderInventory(inventory);
-        this.renderSales(sales);
-        this.renderNotes(notes);
+        this.renderInventory();
+        this.renderSales();
+        this.renderNotes();
+        this.updateMonthlyStats(dataManager.dataCache.inventory);
         this.updateStats();
     }
 
@@ -285,6 +352,13 @@ class UIController {
 
         // Paginación
         const totalSales = filtered.length;
+        const totalPages = Math.ceil(totalSales / this.salesPerPage);
+
+        // Ajustar página actual si excede el total
+        if (this.currentSalesPage > totalPages && totalPages > 0) {
+            this.currentSalesPage = totalPages;
+        }
+
         const startIndex = (this.currentSalesPage - 1) * this.salesPerPage;
         const pagedSales = filtered.slice(startIndex, startIndex + this.salesPerPage);
 
@@ -357,27 +431,49 @@ class UIController {
             return;
         }
 
+        let paginationHtml = `
+            <button class="btn-page" id="prevSalesPage" ${this.currentSalesPage === 1 ? 'disabled' : ''}>Anterior</button>
+        `;
+
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHtml += `
+                <button class="btn-page ${i === this.currentSalesPage ? 'active' : ''}" data-page="${i}">${i}</button>
+            `;
+        }
+
+        paginationHtml += `
+            <button class="btn-page" id="nextSalesPage" ${this.currentSalesPage === totalPages ? 'disabled' : ''}>Siguiente</button>
+        `;
+
+        container.innerHTML = paginationHtml;
+
         // Listeners paginación
         container.querySelectorAll('.btn-page[data-page]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.currentSalesPage = parseInt(e.target.dataset.page);
                 this.renderSales();
-                container.scrollIntoView({ behavior: 'smooth' });
+                document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
             });
         });
 
         const prevBtn = document.getElementById('prevSalesPage');
         const nextBtn = document.getElementById('nextSalesPage');
 
-        if (prevBtn) prevBtn.addEventListener('click', () => {
-            this.currentSalesPage--;
-            this.renderSales();
-        });
+        if (prevBtn && this.currentSalesPage > 1) {
+            prevBtn.addEventListener('click', () => {
+                this.currentSalesPage--;
+                this.renderSales();
+                document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
+            });
+        }
 
-        if (nextBtn) nextBtn.addEventListener('click', () => {
-            this.currentSalesPage++;
-            this.renderSales();
-        });
+        if (nextBtn && this.currentSalesPage < totalPages) {
+            nextBtn.addEventListener('click', () => {
+                this.currentSalesPage++;
+                this.renderSales();
+                document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
+            });
+        }
     }
 
     async quickSell(id) {
@@ -533,8 +629,10 @@ class UIController {
 
     // --- INVENTARIO ---
 
-    renderInventory(items) {
-        if (!items || items.length === 0) {
+    renderInventory(inventory = null) {
+        const data = inventory || dataManager.dataCache.inventory;
+
+        if (!data || data.length === 0) {
             this.inventoryGrid.innerHTML = `
                 <div style="grid-column: 1 / -1; text-align: center; padding: 60px; color: #666;">
                     <div style="font-size: 48px; margin-bottom: 20px;">📦</div>
@@ -542,46 +640,49 @@ class UIController {
                     <p style="font-size: 14px; margin-top: 10px;">Haz clic en "+ Nueva Prenda" para comenzar</p>
                 </div>
             `;
+            this.updateMonthlyStats([]);
             return;
         }
 
-        this.inventoryGrid.innerHTML = items.map(item => this.createItemCard(item)).join('');
-
-        // Actualizar estadísticas cada vez que el inventario cambie
-        this.updateStats();
+        this.inventoryGrid.innerHTML = data.map(item => this.createItemCard(item)).join('');
+        this.updateMonthlyStats(data);
     }
 
     createItemCard(item) {
+        const displayCategory = this.getDisplayCategory(item);
+        const categoryLabel = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
+
         return `
             <div class="card">
-                <div class="card-banner banner-${item.categoria}"></div>
+                <div class="card-banner banner-${displayCategory}">
+                    <div class="category-pill">${categoryLabel}</div>
+                </div>
                 <div class="card-content">
-                    <div class="card-header">
-                        <div class="card-title">${item.tipo}</div>
-                    </div>
+                    <div class="card-title">${item.tipo}</div>
+                    <div class="card-subtitle">${item.color}</div>
                     
-                    <div class="card-info">
-                        <div class="info-row" style="flex-wrap: wrap; height: auto;">
-                            <span class="info-label">Talles:</span>
-                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;">
-                                ${item.stockPorTalla ? Object.keys(item.stockPorTalla)
+                    <div class="card-details" style="margin-top: 10px;">
+                        <span class="detail-label" style="display: block; margin-bottom: 5px; font-size: 12px; opacity: 0.7;">Tallas en stock:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            ${item.stockPorTalla ? Object.keys(item.stockPorTalla)
                 .filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0)
-                .map(t => `<span class="info-value" style="font-size: 10px; background: rgba(67, 233, 123, 0.1); padding: 2px 6px; border-radius: 4px;" title="Talla ${t} (${dataManager.dataCache.tallaMapping[t]})">${t}: ${item.stockPorTalla[t]}</span>`)
-                .join('') : `<span class="info-value">${item.talla}</span>`
+                .map(t => `<span class="size-pill" style="font-size: 11px; background: rgba(67, 233, 123, 0.1); color: #43e97b; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(67, 233, 123, 0.2);" title="Talla ${t}">${t}: <b>${item.stockPorTalla[t]}</b></span>`)
+                .join('') : `<span class="size-pill" style="font-size: 11px; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">${item.talla}</span>`
             }
-                            </div>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Color:</span>
-                            <span class="info-value">${item.color}</span>
                         </div>
                     </div>
 
-                    <div class="card-stock">
+                    <div class="card-stock" style="margin-top: 15px;">
                         <div class="stock-label">Stock Total</div>
                         <div class="stock-value">${item.cantidad}</div>
-                        <div class="stock-price">$${item.precio.toFixed(2)}</div>
+                        <div class="stock-price" style="font-size: 20px;">$${item.precio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
                     </div>
+                    
+                    ${item.fechaCreacion ? `
+                    <div class="creation-date" title="Fecha de ingreso: ${new Date(item.fechaCreacion).toLocaleString()}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        ${new Date(item.fechaCreacion).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </div>` : ''}
 
                     <div class="card-actions">
                         <button class="btn btn-sell-quick" data-sell-id="${item.id}" title="Registrar Venta">
@@ -603,6 +704,7 @@ class UIController {
     filterInventory() {
         const searchTerm = this.searchInput.value.toLowerCase();
         const category = this.filterCategory.value;
+        const monthFilter = this.inventoryMonthFilter ? this.inventoryMonthFilter.value : '';
 
         let filtered = dataManager.dataCache.inventory;
 
@@ -610,18 +712,69 @@ class UIController {
             filtered = filtered.filter(item =>
                 item.tipo.toLowerCase().includes(searchTerm) ||
                 item.color.toLowerCase().includes(searchTerm) ||
-                item.talla.toLowerCase().includes(searchTerm)
+                (item.talla && item.talla.toLowerCase().includes(searchTerm))
             );
         }
 
         if (category) {
-            filtered = filtered.filter(item => item.categoria === category);
+            filtered = filtered.filter(item => this.getDisplayCategory(item) === category);
         }
 
+        if (monthFilter) {
+            filtered = filtered.filter(item => {
+                // If item has no date, treat it as historical (only show if NO month filter is active or handle as old)
+                if (!item.fechaCreacion) return false;
+                return item.fechaCreacion.startsWith(monthFilter);
+            });
+        }
+
+        // Calculate and update monthly stats based on current view
+        this.updateMonthlyStats(filtered);
         this.renderInventory(filtered);
     }
 
+    updateMonthlyStats(filteredItems) {
+        const itemsCount = filteredItems.length;
+        const stockSum = filteredItems.reduce((acc, item) => acc + (parseInt(item.cantidad) || 0), 0);
+
+        if (this.totalItemsMonth) this.totalItemsMonth.textContent = itemsCount;
+        if (this.totalStockMonth) this.totalStockMonth.textContent = stockSum;
+    }
+
+    getDisplayCategory(item) {
+        // Si el item tiene una categoría manual que no es la por defecto, usarla
+        if (item.categoria && item.categoria !== 'remeras' && item.categoria !== 'otros') {
+            return item.categoria;
+        }
+
+        const tipo = (item.tipo || '').toLowerCase();
+
+        // Inferencia inteligente basada en palabras clave
+        if (tipo.includes('short')) return 'shorts';
+        if (tipo.includes('musculosa')) return 'musculosas';
+        if (tipo.includes('pantalon') || tipo.includes('jean')) return 'pantalones';
+        if (tipo.includes('palazo')) return 'palazos';
+        if (tipo.includes('mono')) return 'monos';
+        if (tipo.includes('pollera')) return 'polleras';
+        if (tipo.includes('vestido')) return 'vestidos';
+        if (tipo.includes('abrigo') || tipo.includes('campera') || tipo.includes('buzo')) return 'abrigos';
+        if (tipo.includes('sudadera')) return 'sudaderas';
+        if (tipo.includes('conjunto')) return 'conjuntos';
+        if (tipo.includes('media')) return 'medias';
+        if (tipo.includes('accesorio') || tipo.includes('gorra') || tipo.includes('cartera')) return 'accesorios';
+        if (tipo.includes('calzado') || tipo.includes('zapatilla') || tipo.includes('zapato')) return 'calzado';
+
+        return item.categoria || 'remeras';
+    }
+
     // --- MODAL DE ITEM ---
+
+    selectCategoryChip(element) {
+        document.querySelectorAll('.category-chip').forEach(chip => chip.classList.remove('selected'));
+        element.classList.add('selected');
+        const hiddenInput = document.getElementById('itemCategoria');
+        if (hiddenInput) hiddenInput.value = element.dataset.color;
+    }
 
     showItemModal(item = null) {
         this.currentEditingId = item ? item.id : null;
@@ -640,9 +793,9 @@ class UIController {
                 input.value = item.stockPorTalla ? (item.stockPorTalla[size] || 0) : (item.talla === size ? item.cantidad : 0);
             });
 
-            // Select color
-            const colorBtn = document.querySelector(`[data-color="${item.categoria}"]`);
-            if (colorBtn) this.selectColor(colorBtn);
+            // Select category chip
+            const chip = document.querySelector(`.category-chip[data-color="${item.categoria}"]`);
+            if (chip) this.selectCategoryChip(chip);
         } else {
             title.textContent = 'Nueva Prenda';
             document.getElementById('itemTipo').value = '';
@@ -653,9 +806,9 @@ class UIController {
             // Reset stock inputs
             this.sizeStockInputs.forEach(input => input.value = '');
 
-            // Select first color
-            const firstColor = document.querySelector('.color-option');
-            if (firstColor) this.selectColor(firstColor);
+            // Select first chip (Remeras)
+            const firstChip = document.querySelector('.category-chip');
+            if (firstChip) this.selectCategoryChip(firstChip);
         }
 
         this.closeAllModals();
@@ -716,6 +869,7 @@ class UIController {
 
         this.closeItemModal();
         this.updateStats();
+        this.filterInventory(); // Refresh view
     }
 
     async editItem(id) {
@@ -877,6 +1031,7 @@ class UIController {
                 btn.classList.add('active');
                 view.style.display = 'block';
                 if (t === 'balance') this.renderBalance();
+                if (t === 'inventory') this.filterInventory();
             } else {
                 btn.classList.remove('active');
                 view.style.display = 'none';
