@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Stock - Ropa</title>
+    <link rel="stylesheet" type="text/css" href="estilos.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <!-- Login Modal (Shown on startup) -->
+    <div id="loginModal" class="modal" style="display: flex;">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header" style="justify-content: center;">
+                <h2>🔐 Acceso al Sistema</h2>
+            </div>
+            <div class="modal-body">
+                <p style="color: #ccc; margin-bottom: 25px; font-size: 14px; text-align: center;">
+                    Ingresa tus credenciales para acceder al control de stock
+                </p>
+
+                <div class="form-group">
+                    <label for="loginUsername">Usuario:</label>
+                    <input type="text" id="loginUsername" class="input-hours" placeholder="Nombre de usuario"
+                        autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="loginToken">Token de Acceso:</label>
+                    <input type="password" id="loginToken" class="input-hours" placeholder="Token único"
+                        autocomplete="current-password">
+                </div>
+
+                <div id="loginError" style="margin-top: 15px; font-size: 13px; color: #ff3366; text-align: center;">
+                </div>
+
+                <button id="btnLogin" class="btn-modal btn-save"
+                    style="width: 100%; margin-top: 20px; height: 50px; font-size: 16px;">
+                    Ingresar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainApp" style="display: none;">
+        <div class="header">
+            <h1 class="title">Control de Stock - Ropa</h1>
+            <div class="header-controls">
+                <span id="currentUserDisplay" style="color: #bbc0ff; font-size: 14px;"></span>
+                <button id="btnLogout" class="export-btn btn-logout" title="Cerrar Sesión">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span class="hide-mobile"></span>Salir</span>
+                </button>
+                <button id="themeToggle" class="theme-toggle" title="Cambiar tema">
+                    <!-- Icono inyectado por JS -->
+                </button>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <button id="tabInventory" class="nav-tab active">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 8V21H3V8" />
+                    <path d="M1 3H23V8H1V3Z" />
+                    <path d="M10 12H14" />
+                </svg>
+                Inventario
+            </button>
+            <button id="tabSales" class="nav-tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23" />
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                Ventas
+            </button>
+            <button id="tabNotes" class="nav-tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+                Notas
+            </button>
+            <button id="tabBalance" class="nav-tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23" />
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                Balance
+            </button>
+        </nav>
+
+        <div class="Contenido-Lateral">
+            <div class="sidebar">
+                <div class="user-card">
+                    <div class="avatar">
+                        <div class="avatar-content" id="userInitialContainer">
+                            <span id="userInitialLetter">P</span>
+                            <div class="avatar-badge">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="user-label">Sistema de Inventario</div>
+                    <div class="user-name" id="userName">Usuario</div>
+
+                    <div class="stats-summary" id="statsSummaryContainer">
+                        <div class="stats-row">
+                            <span class="stats-label">Total Prendas:</span>
+                            <span id="totalItems" class="stats-value">0</span>
+                        </div>
+                        <div class="stats-row">
+                            <span class="stats-label">Stock Total:</span>
+                            <span id="totalStock" class="stats-value accent">0</span>
+                        </div>
+                        <div class="stats-row">
+                            <span class="stats-label">Ventas Totales:</span>
+                            <span id="totalSalesAmount" class="stats-value" style="color: #43e97b;">$0.00</span>
+                        </div>
+                        <div class="sidebar-divider" style="margin: 15px 0;"></div>
+                        <div class="stats-row" style="opacity: 0.9;">
+                            <span class="stats-label">Prendas Mes:</span>
+                            <span id="totalItemsMonth" class="stats-value">0</span>
+                        </div>
+                        <div class="stats-row" style="opacity: 0.9;">
+                            <span class="stats-label">Stock Mes:</span>
+                            <span id="totalStockMonth" class="stats-value accent">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="export-buttons">
+                    <button id="btnAddItem" class="export-btn btn-primary"
+                        style="justify-content: center; font-weight: bold;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Nueva Prenda
+                    </button>
+                    <div class="sidebar-divider"></div>
+
+                    <button id="btnExportExcel" class="export-btn btn-excel">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                        Descargar Excel (.xlsx)
+                    </button>
+                    <button id="btnCopy" class="export-btn btn-copy">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        Copiar para Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista Inventario -->
+            <main id="viewInventory" class="vista-activa">
+                <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
+                    <div class="search-container-small" style="flex: 1;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon-svg"
+                            style="color: #94a3b8;">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input type="text" id="searchInput" class="input-hours"
+                            placeholder="Buscar por tipo, color, talla..." style="width: 100%; padding-left: 42px;">
+                    </div>
+                    <label for="inventoryMonthFilter" class="filter-label-group"
+                        style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #94a3b8; font-size: 13px;">Mes:</span>
+                        <input type="month" id="inventoryMonthFilter" class="input-hours" style="width: auto;"
+                            onclick="this.showPicker()">
+                        <button type="button" id="clearMonthFilter" class="btn-step" title="Ver Histórico (Todo)"
+                            style="width: 24px; height: 24px; font-size: 12px; margin-left: -5px;">×</button>
+                    </label>
+                    <select id="filterCategory" class="input-hours" style="width: auto;">
+                        <option value="">Todas las categorías</option>
+                        <option value="remeras">Remeras</option>
+                        <option value="musculosas">Musculosas</option>
+                        <option value="pantalones">Pantalones</option>
+                        <option value="palazos">Palazos</option>
+                        <option value="monos">Monos</option>
+                        <option value="shorts">Shorts</option>
+                        <option value="polleras">Polleras</option>
+                        <option value="vestidos">Vestidos</option>
+                        <option value="abrigos">Abrigos</option>
+                        <option value="sudaderas">Sudaderas</option>
+                        <option value="conjuntos">Conjuntos</option>
+                        <option value="medias">Medias</option>
+                        <option value="accesorios">Accesorios</option>
+                        <option value="calzado">Calzado</option>
+                        <option value="otros">Otros</option>
+                    </select>
+                </div>
+                <section id="inventoryGrid" class="Contenido-Grid-Cards">
+                    <!-- Las cards se inyectan aquí -->
+                </section>
+            </main>
+
+            <!-- Vista Ventas -->
+            <main id="viewSales" style="display: none;">
+                <section class="history-container">
+                    <div class="header-filter-row"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                        <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff8c42"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23" />
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                            Historial de Ventas
+                        </h2>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <div class="search-container-small">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                    class="search-icon-svg" style="color: #94a3b8;">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                                <input type="text" id="salesSearchInput" class="input-hours"
+                                    placeholder="Buscar producto..." style="padding-left: 35px; width: 200px;">
+                            </div>
+                            <label for="salesFilterDate" class="filter-label-group">
+                                <span style="color: #94a3b8; font-size: 13px;">Filtrar:</span>
+                                <input type="date" id="salesFilterDate" class="input-hours" style="width: auto;"
+                                    onclick="this.showPicker()">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="sales-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Talla</th>
+                                    <th>Cliente</th>
+                                    <th>Cant.</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody">
+                                <!-- Las ventas se inyectan aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="salesPagination" class="pagination-container">
+                        <!-- Botones de paginación -->
+                    </div>
+                </section>
+            </main>
+
+            <!-- Vista Notas -->
+            <main id="viewNotes" style="display: none;">
+                <section class="history-container">
+                    <h2 style="margin-bottom: 25px; color: white;">📝 Notas Compartidas</h2>
+
+                    <div class="add-note-container" style="margin-bottom: 30px; display: flex; gap: 10px;">
+                        <input type="text" id="noteInput" class="note-input-premium"
+                            placeholder="Escribe una nota o recordatorio..." style="flex: 1;">
+                        <button id="btnAddNote" class="btn-add-note" style="width: 40px; height: 40px;">+</button>
+                    </div>
+
+                    <div id="notesList" class="notes-list">
+                        <!-- Notas se inyectan aquí -->
+                    </div>
+                </section>
+            </main>
+
+            <!-- Vista Balance -->
+            <main id="viewBalance" style="display: none;">
+                <section class="history-container">
+                    <div class="header-filter-row"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                        <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#43e97b"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                            Balance Financiero
+                        </h2>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <label for="balanceMonthFilter" class="filter-label-group">
+                                <span style="color: #94a3b8; font-size: 13px;">Filtrar Mes:</span>
+                                <input type="month" id="balanceMonthFilter" class="input-hours" style="width: auto;"
+                                    onclick="this.showPicker()">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="financial-dashboard">
+                        <div class="finance-card">
+                            <div class="finance-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="finance-icon-box"
+                                        style="background: rgba(255, 107, 53, 0.1); color: #ff6b35;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                        </svg>
+                                    </div>
+                                    <span class="finance-label">Capital Invertido</span>
+                                </div>
+                                <button id="btnEditCapital" class="btn-edit-small">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="finance-value" id="balanceCapital">$0.00</div>
+                            <div class="finance-footer">Monto inicial total</div>
+                        </div>
+
+                        <div class="finance-card">
+                            <div class="finance-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="finance-icon-box"
+                                        style="background: rgba(67, 233, 123, 0.1); color: #43e97b;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <line x1="12" y1="1" x2="12" y2="23" />
+                                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                        </svg>
+                                    </div>
+                                    <span class="finance-label">Ventas del Mes</span>
+                                </div>
+                            </div>
+                            <div class="finance-value highlight" id="balanceVentasMensuales">$0.00</div>
+                            <div class="finance-footer">Según el filtro seleccionado</div>
+                        </div>
+
+                        <div class="finance-card">
+                            <div class="finance-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="finance-icon-box"
+                                        style="background: rgba(32, 226, 215, 0.1); color: #20e2d7;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                        </svg>
+                                    </div>
+                                    <span class="finance-label">Ganancia Neta</span>
+                                </div>
+                            </div>
+                            <div class="finance-value" id="balanceGanancia">$0.00</div>
+                            <div class="finance-footer">Histórico vs Capital</div>
+                        </div>
+                    </div>
+
+                    <div class="recovery-section">
+                        <div class="recovery-header">
+                            <span class="recovery-title">📊 Estado de Recuperación</span>
+                            <span class="recovery-percentage" id="recoveryPercentage">0%</span>
+                        </div>
+                        <div class="recovery-bar-container">
+                            <div class="recovery-bar-progress" id="recoveryBar"></div>
+                        </div>
+                        <div class="recovery-stats">
+                            <div class="recovery-stat">
+                                <span class="stat-label">Total Recaudado:</span>
+                                <span class="stat-value" id="balanceTotalRecaudado">$0.00</span>
+                            </div>
+                            <div class="recovery-stat">
+                                <span class="stat-label">Falta para el 100%:</span>
+                                <span class="stat-value" id="balanceRestante">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Agregar/Editar Prenda -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="itemModalTitle">Nueva Prenda</h2>
+                <span class="modal-close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </span>
+            </div>
+
+            <!-- Body (Scrollable) -->
+            <div class="modal-body">
+                <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+
+                    <!-- Left Column: Info & Category -->
+                    <div style="flex: 1; min-width: 350px; display: flex; flex-direction: column; gap: 20px;">
+                        <div class="modal-row" style="flex-direction: column; gap: 15px;">
+                            <div class="form-group">
+                                <label for="itemTipo">Tipo de Prenda:</label>
+                                <input type="text" id="itemTipo" class="input-hours"
+                                    placeholder="Ej: Remera, Jean, etc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="itemColor">Color/Descripción:</label>
+                                <input type="text" id="itemColor" class="input-hours"
+                                    placeholder="Ej: Negro, Azul, etc.">
+                            </div>
+                            <div class="form-group">
+                                <label for="itemPrecio">Precio:</label>
+                                <input type="text" id="itemPrecio" class="input-hours" placeholder="Ej: 10.000 o 10000"
+                                    inputmode="decimal">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="margin-bottom: 15px; display: block;">Seleccionar Categoría:</label>
+                            <div class="category-chips-grid">
+                                <div class="category-chip" data-color="remeras">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff5e62, #ff9966);"></span>
+                                    <span class="chip-label">Remeras</span>
+                                </div>
+                                <div class="category-chip" data-color="musculosas">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff9a9e, #fad0c4);"></span>
+                                    <span class="chip-label">Musculosas</span>
+                                </div>
+                                <div class="category-chip" data-color="pantalones">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #56CCF2, #2F80ED);"></span>
+                                    <span class="chip-label">Pantalones</span>
+                                </div>
+                                <div class="category-chip" data-color="palazos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #4facfe, #00f2fe);"></span>
+                                    <span class="chip-label">Palazos</span>
+                                </div>
+                                <div class="category-chip" data-color="monos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #667eea, #764ba2);"></span>
+                                    <span class="chip-label">Monos</span>
+                                </div>
+                                <div class="category-chip" data-color="shorts">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #f093fb, #f5576c);"></span>
+                                    <span class="chip-label">Shorts</span>
+                                </div>
+                                <div class="category-chip" data-color="polleras">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff0844, #ffb199);"></span>
+                                    <span class="chip-label">Polleras</span>
+                                </div>
+                                <div class="category-chip" data-color="vestidos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #6a11cb, #2575fc);"></span>
+                                    <span class="chip-label">Vestidos</span>
+                                </div>
+                                <div class="category-chip" data-color="abrigos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #30cfd0, #330867);"></span>
+                                    <span class="chip-label">Abrigos</span>
+                                </div>
+                                <div class="category-chip" data-color="sudaderas">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #434343, #000000);"></span>
+                                    <span class="chip-label">Sudaderas</span>
+                                </div>
+                                <div class="category-chip" data-color="conjuntos">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #309108, #fdcbf1);"></span>
+                                    <span class="chip-label">Conjuntos</span>
+                                </div>
+                                <div class="category-chip" data-color="medias">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff9a9e, #fecfef);"></span>
+                                    <span class="chip-label">Medias</span>
+                                </div>
+                                <div class="category-chip" data-color="accesorios">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #43e97b, #38f9d7);"></span>
+                                    <span class="chip-label">Accesorios</span>
+                                </div>
+                                <div class="category-chip" data-color="calzado">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #a18cd1, #fbc2eb);"></span>
+                                    <span class="chip-label">Calzado</span>
+                                </div>
+                                <div class="category-chip" data-color="otros">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #f6d365, #fda085);"></span>
+                                    <span class="chip-label">Otros</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="itemCategoria" value="remeras">
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Sizes -->
+                    <div
+                        style="flex: 1; min-width: 350px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05);">
+                        <label
+                            style="display: block; margin-bottom: 20px; font-weight: 700; color: #43e97b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Control
+                            de Stock por Talle:</label>
+                        <div class="size-stock-grid" style="grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                            <!-- XS (36) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">XS (36)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="XS">−</button>
+                                    <input type="number" data-size="XS" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="XS">+</button>
+                                </div>
+                            </div>
+                            <!-- S (38) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">S (38)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="S">−</button>
+                                    <input type="number" data-size="S" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="S">+</button>
+                                </div>
+                            </div>
+                            <!-- M (40) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">M (40)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="M">−</button>
+                                    <input type="number" data-size="M" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="M">+</button>
+                                </div>
+                            </div>
+                            <!-- L (42) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">L (42)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="L">−</button>
+                                    <input type="number" data-size="L" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="L">+</button>
+                                </div>
+                            </div>
+                            <!-- XL (44) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">XL (44)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="XL">−</button>
+                                    <input type="number" data-size="XL" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="XL">+</button>
+                                </div>
+                            </div>
+                            <!-- XXL (46) -->
+                            <div class="size-input-group">
+                                <label style="font-size: 11px; color: #94a3b8;">XXL (46)</label>
+                                <div class="stepper">
+                                    <button type="button" class="btn-step minus" data-size="XXL">−</button>
+                                    <input type="number" data-size="XXL" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="XXL">+</button>
+                                </div>
+                            </div>
+                            <!-- Única -->
+                            <div class="size-input-group"
+                                style="grid-column: span 2; margin-top: 10px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <label style="font-size: 12px; color: #43e97b; font-weight: 600;">Talla Única</label>
+                                <div class="stepper" style="margin-top: 5px;">
+                                    <button type="button" class="btn-step minus" data-size="Única">−</button>
+                                    <input type="number" data-size="Única" class="size-stock-input" value="0" min="0">
+                                    <button type="button" class="btn-step plus" data-size="Única">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button id="btnCancelItem" class="btn-modal btn-cancel">Cancelar</button>
+                <button id="btnSaveItem" class="btn-modal btn-save">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación Genérico -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1c204b, #2d3478);">
+                <h2 id="confirmTitle">Confirmar Acción</h2>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <p id="confirmMessage" style="margin-bottom: 20px; line-height: 1.5; color: #eee;"></p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="btnConfirmCancel" class="btn-modal btn-cancel" style="flex: 1;">Cancelar</button>
+                    <button id="btnConfirmOk" class="btn-modal btn-save" style="flex: 1;">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Vender (Input rápido) -->
+    <div id="saleModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>📦 Registrar Venta</h2>
+                <span class="modal-close" id="closeSaleModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </span>
+            </div>
+            <div class="modal-body">
+                <div id="saleItemInfo"
+                    style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <!-- Info del item inyectada por JS -->
+                </div>
+                <div class="form-group">
+                    <label for="saleCustomer">Nombre del Cliente:</label>
+                    <input type="text" id="saleCustomer" class="input-hours" placeholder="Nombre completo">
+                </div>
+                <div class="form-group">
+                    <label for="saleStatus">Estado del Pago:</label>
+                    <select id="saleStatus" class="input-hours">
+                        <option value="pagado" style="color: #44d16e;">Pagado (Total)</option>
+                        <option value="deuda" style="color: #ff3366;">Deuda (Pendiente)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="saleTalla">Seleccionar Talla:</label>
+                    <select id="saleTalla" class="input-hours">
+                        <!-- Opciones inyectadas por JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="saleQuantity">Cantidad a vender:</label>
+                    <input type="number" id="saleQuantity" class="input-hours" value="1" min="1">
+                </div>
+                <div id="saleError"
+                    style="color: #ff3366; font-size: 13px; margin-bottom: 15px; text-align: center; display: none;">
+                </div>
+                <button id="btnConfirmSale" class="btn-modal btn-save" style="width: 100%; height: 45px;">Confirmar
+                    Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Capital -->
+    <div id="capitalModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>💰 Editar Capital</h2>
+                <span class="modal-close" id="closeCapitalModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="capitalInput">Monto Invertido Total:</label>
+                    <input type="number" id="capitalInput" class="input-hours" placeholder="0.00" step="0.01" min="0">
+                    <p style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
+                        Este valor se usa para calcular la ganancia neta respecto a las ventas totales.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button id="btnCancelCapital" class="btn-modal btn-cancel" style="flex: 1;">Cancelar</button>
+                    <button id="btnSaveCapital" class="btn-modal btn-save" style="flex: 1;">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+
+</body>
+
+</html>

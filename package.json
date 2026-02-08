@@ -4,7 +4,8 @@
     "description": "Stock Control Application with Obfuscated JS",
     "main": "js/app.js",
     "scripts": {
-        "build": "javascript-obfuscator src --output js --compact true"
+        "clean": "if exist dist rmdir /s /q dist",
+        "build": "npm run clean && mkdir dist && mkdir dist\\js && javascript-obfuscator src --output dist/js --compact true && copy index.html dist\\index.html && copy estilos.css dist\\estilos.css"
     },
     "devDependencies": {
         "javascript-obfuscator": "^4.2.2"
