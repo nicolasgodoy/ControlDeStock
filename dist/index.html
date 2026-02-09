@@ -181,46 +181,48 @@
 
             <!-- Vista Inventario -->
             <main id="viewInventory" class="vista-activa">
-                <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
-                    <div class="search-container-small" style="flex: 1;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon-svg"
-                            style="color: #94a3b8;">
-                            <circle cx="11" cy="11" r="8" />
-                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                        <input type="text" id="searchInput" class="input-hours"
-                            placeholder="Buscar por tipo, color, talla..." style="width: 100%; padding-left: 42px;">
+                <section class="history-container">
+                    <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
+                        <div class="search-container-small" style="flex: 1;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon-svg"
+                                style="color: #94a3b8;">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input type="text" id="searchInput" class="input-hours"
+                                placeholder="Buscar por tipo, color, talla..." style="width: 100%; padding-left: 42px;">
+                        </div>
+                        <label for="inventoryMonthFilter" class="filter-label-group"
+                            style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #94a3b8; font-size: 13px;">Mes:</span>
+                            <input type="month" id="inventoryMonthFilter" class="input-hours" style="width: auto;"
+                                onclick="this.showPicker()">
+                            <button type="button" id="clearMonthFilter" class="btn-step" title="Ver Histórico (Todo)"
+                                style="width: 24px; height: 24px; font-size: 12px; margin-left: -5px;">×</button>
+                        </label>
+                        <select id="filterCategory" class="input-hours" style="width: auto;">
+                            <option value="">Todas las categorías</option>
+                            <option value="remeras">Remeras</option>
+                            <option value="musculosas">Musculosas</option>
+                            <option value="pantalones">Pantalones</option>
+                            <option value="palazos">Palazos</option>
+                            <option value="monos">Monos</option>
+                            <option value="shorts">Shorts</option>
+                            <option value="polleras">Polleras</option>
+                            <option value="vestidos">Vestidos</option>
+                            <option value="abrigos">Abrigos</option>
+                            <option value="sudaderas">Sudaderas</option>
+                            <option value="conjuntos">Conjuntos</option>
+                            <option value="medias">Medias</option>
+                            <option value="accesorios">Accesorios</option>
+                            <option value="calzado">Calzado</option>
+                            <option value="otros">Otros</option>
+                        </select>
                     </div>
-                    <label for="inventoryMonthFilter" class="filter-label-group"
-                        style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #94a3b8; font-size: 13px;">Mes:</span>
-                        <input type="month" id="inventoryMonthFilter" class="input-hours" style="width: auto;"
-                            onclick="this.showPicker()">
-                        <button type="button" id="clearMonthFilter" class="btn-step" title="Ver Histórico (Todo)"
-                            style="width: 24px; height: 24px; font-size: 12px; margin-left: -5px;">×</button>
-                    </label>
-                    <select id="filterCategory" class="input-hours" style="width: auto;">
-                        <option value="">Todas las categorías</option>
-                        <option value="remeras">Remeras</option>
-                        <option value="musculosas">Musculosas</option>
-                        <option value="pantalones">Pantalones</option>
-                        <option value="palazos">Palazos</option>
-                        <option value="monos">Monos</option>
-                        <option value="shorts">Shorts</option>
-                        <option value="polleras">Polleras</option>
-                        <option value="vestidos">Vestidos</option>
-                        <option value="abrigos">Abrigos</option>
-                        <option value="sudaderas">Sudaderas</option>
-                        <option value="conjuntos">Conjuntos</option>
-                        <option value="medias">Medias</option>
-                        <option value="accesorios">Accesorios</option>
-                        <option value="calzado">Calzado</option>
-                        <option value="otros">Otros</option>
-                    </select>
-                </div>
-                <section id="inventoryGrid" class="Contenido-Grid-Cards">
-                    <!-- Las cards se inyectan aquí -->
+                    <section id="inventoryGrid" class="Contenido-Grid-Cards">
+                        <!-- Las cards se inyectan aquí -->
+                    </section>
                 </section>
             </main>
 

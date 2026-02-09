@@ -1390,6 +1390,26 @@ body.light-mode .notification {
     .header-filter-row input[type="date"] {
         width: 100% !important;
     }
+
+    /* UNIFICACIÓN DE ANCHOS Y CONTENEDORES */
+    .history-container {
+        padding: 15px !important;
+        min-height: auto !important;
+        border-radius: 12px !important;
+        margin-bottom: 20px !important;
+    }
+
+    .Contenido-Grid-Cards {
+        gap: 15px !important;
+    }
+
+    .finance-card {
+        padding: 15px !important;
+    }
+
+    .recovery-section {
+        padding: 15px !important;
+    }
 }
 
 
