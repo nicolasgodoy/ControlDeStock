@@ -397,6 +397,14 @@ body.light-mode .card:hover {
     background: linear-gradient(to right, #ff0844, #ffb199);
 }
 
+.banner-calzas {
+    background: linear-gradient(to right, #ff758c, #ff7eb3);
+}
+
+.banner-catsuit {
+    background: linear-gradient(to right, #4158d0, #c850c0);
+}
+
 .banner-vestidos {
     background: linear-gradient(to right, #6a11cb, #2575fc);
 }
