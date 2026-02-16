@@ -276,7 +276,7 @@ body.light-mode .export-btn {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #ff6b35, #ff8c42) !important;
+    background: linear-gradient(135deg, #f7581d, #ff8c42) !important;
     color: white !important;
 }
 
@@ -285,13 +285,15 @@ body.light-mode .export-btn {
 }
 
 .btn-excel {
-    background: #43e97b !important;
-    color: #1c204b !important;
+    background: #5847eb !important;
+    color: #ffffff !important;
+    font-weight: 600;
 }
 
 .btn-copy {
-    background: #20e2d7 !important;
-    color: #1c204b !important;
+    background: #252547 !important;
+    color: #ffffff !important;
+    font-weight: 600;
 }
 
 .sidebar-divider {
