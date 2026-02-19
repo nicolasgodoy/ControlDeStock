@@ -4,9 +4,13 @@
     "description": "Stock Control Application with Obfuscated JS",
     "main": "js/app.js",
     "scripts": {
-        "build": "node scripts/build.js"
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "obfuscate": "node scripts/build.js"
     },
     "devDependencies": {
-        "javascript-obfuscator": "^4.2.2"
+        "javascript-obfuscator": "^4.2.2",
+        "vite": "^7.3.1"
     }
 }
