@@ -4,9 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Stock - Ropa</title>
-    <link rel="stylesheet" type="text/css" href="estilos.css" />
+    <title>Control de Stock - Ropa</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script type="module" crossorigin src="/assets/index-CweDs8Bn.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BgSpTNXg.css">
 </head>
 
 <body>
@@ -182,43 +183,55 @@
             <!-- Vista Inventario -->
             <main id="viewInventory" class="vista-activa">
                 <section class="history-container">
-                    <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
-                        <div class="search-container-small" style="flex: 1;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon-svg"
-                                style="color: #94a3b8;">
-                                <circle cx="11" cy="11" r="8" />
-                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <div class="header-filter-row" style="margin-bottom: 30px;">
+                        <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff8c42"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 8V21H3V8" />
+                                <path d="M1 3H23V8H1V3Z" />
+                                <path d="M10 12H14" />
                             </svg>
-                            <input type="text" id="searchInput" class="input-hours"
-                                placeholder="Buscar por tipo, color, talla..." style="width: 100%; padding-left: 42px;">
+                            Inventario de Prendas
+                        </h2>
+                        <div>
+                            <div class="search-container-small">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                    class="search-icon-svg" style="color: #94a3b8;">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                                <input type="text" id="searchInput" class="input-hours"
+                                    placeholder="Buscar por tipo, color..." style="padding-left: 35px;">
+                            </div>
+                            <label for="inventoryMonthFilter" class="filter-label-group">
+                                <span style="color: #94a3b8; font-size: 13px;">Mes:</span>
+                                <input type="month" id="inventoryMonthFilter" class="input-hours" style="width: auto;"
+                                    onclick="this.showPicker()">
+                                <button type="button" id="clearMonthFilter" class="btn-step" title="Ver Histórico"
+                                    style="width: 20px; height: 20px; font-size: 10px; margin-left: -5px;">×</button>
+                            </label>
+                            <select id="filterCategory" class="input-hours" style="width: auto;">
+                                <option value="">Todas</option>
+                                <option value="remeras">Remeras</option>
+                                <option value="musculosas">Musculosas</option>
+                                <option value="pantalones">Pantalones</option>
+                                <option value="palazos">Palazos</option>
+                                <option value="monos">Monos</option>
+                                <option value="shorts">Shorts</option>
+                                <option value="polleras">Polleras</option>
+                                <option value="calzas">Calzas</option>
+                                <option value="catsuit">Catsuit</option>
+                                <option value="vestidos">Vestidos</option>
+                                <option value="abrigos">Abrigos</option>
+                                <option value="sudaderas">Sudaderas</option>
+                                <option value="conjuntos">Conjuntos</option>
+                                <option value="medias">Medias</option>
+                                <option value="accesorios">Accesorios</option>
+                                <option value="calzado">Calzado</option>
+                                <option value="otros">Otros</option>
+                            </select>
                         </div>
-                        <label for="inventoryMonthFilter" class="filter-label-group"
-                            style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #94a3b8; font-size: 13px;">Mes:</span>
-                            <input type="month" id="inventoryMonthFilter" class="input-hours" style="width: auto;"
-                                onclick="this.showPicker()">
-                            <button type="button" id="clearMonthFilter" class="btn-step" title="Ver Histórico (Todo)"
-                                style="width: 24px; height: 24px; font-size: 12px; margin-left: -5px;">×</button>
-                        </label>
-                        <select id="filterCategory" class="input-hours" style="width: auto;">
-                            <option value="">Todas las categorías</option>
-                            <option value="remeras">Remeras</option>
-                            <option value="musculosas">Musculosas</option>
-                            <option value="pantalones">Pantalones</option>
-                            <option value="palazos">Palazos</option>
-                            <option value="monos">Monos</option>
-                            <option value="shorts">Shorts</option>
-                            <option value="polleras">Polleras</option>
-                            <option value="vestidos">Vestidos</option>
-                            <option value="abrigos">Abrigos</option>
-                            <option value="sudaderas">Sudaderas</option>
-                            <option value="conjuntos">Conjuntos</option>
-                            <option value="medias">Medias</option>
-                            <option value="accesorios">Accesorios</option>
-                            <option value="calzado">Calzado</option>
-                            <option value="otros">Otros</option>
-                        </select>
                     </div>
                     <section id="inventoryGrid" class="Contenido-Grid-Cards">
                         <!-- Las cards se inyectan aquí -->
@@ -229,8 +242,7 @@
             <!-- Vista Ventas -->
             <main id="viewSales" style="display: none;">
                 <section class="history-container">
-                    <div class="header-filter-row"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <div class="header-filter-row" style="margin-bottom: 30px;">
                         <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff8c42"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -239,7 +251,7 @@
                             </svg>
                             Historial de Ventas
                         </h2>
-                        <div style="display: flex; gap: 10px; align-items: center;">
+                        <div>
                             <div class="search-container-small">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -248,7 +260,7 @@
                                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                                 </svg>
                                 <input type="text" id="salesSearchInput" class="input-hours"
-                                    placeholder="Buscar producto..." style="padding-left: 35px; width: 200px;">
+                                    placeholder="Buscar producto..." style="padding-left: 35px;">
                             </div>
                             <label for="salesFilterDate" class="filter-label-group">
                                 <span style="color: #94a3b8; font-size: 13px;">Filtrar:</span>
@@ -304,8 +316,7 @@
             <!-- Vista Balance -->
             <main id="viewBalance" style="display: none;">
                 <section class="history-container">
-                    <div class="header-filter-row"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <div class="header-filter-row" style="margin-bottom: 30px;">
                         <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#43e97b"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -313,7 +324,7 @@
                             </svg>
                             Balance Financiero
                         </h2>
-                        <div style="display: flex; gap: 10px; align-items: center;">
+                        <div>
                             <label for="balanceMonthFilter" class="filter-label-group">
                                 <span style="color: #94a3b8; font-size: 13px;">Filtrar Mes:</span>
                                 <input type="month" id="balanceMonthFilter" class="input-hours" style="width: auto;"
@@ -485,6 +496,16 @@
                                     <span class="chip-color"
                                         style="background: linear-gradient(to right, #ff0844, #ffb199);"></span>
                                     <span class="chip-label">Polleras</span>
+                                </div>
+                                <div class="category-chip" data-color="calzas">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #ff758c, #ff7eb3);"></span>
+                                    <span class="chip-label">Calzas</span>
+                                </div>
+                                <div class="category-chip" data-color="catsuit">
+                                    <span class="chip-color"
+                                        style="background: linear-gradient(to right, #4158d0, #c850c0);"></span>
+                                    <span class="chip-label">Catsuit</span>
                                 </div>
                                 <div class="category-chip" data-color="vestidos">
                                     <span class="chip-color"
@@ -707,8 +728,7 @@
             </div>
         </div>
     </div>
-
-    <script type="module" src="./js/app.js"></script>
+
 
 </body>
 
