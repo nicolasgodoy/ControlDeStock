@@ -964,9 +964,10 @@ class UIController {
         this.balanceGanancia.textContent = `$${stats.gananciaNeta.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
         this.balanceGanancia.style.color = stats.gananciaNeta >= 0 ? '#43e97b' : '#ff3366';
 
-        this.balanceTotalRecaudado.textContent = `$${stats.totalVentas.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        const ventasExposicion = monthFilter ? stats.ventasMensuales : stats.totalVentas;
+        this.balanceTotalRecaudado.textContent = `$${ventasExposicion.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
-        const restante = Math.max(0, stats.capitalInvertido - stats.totalVentas);
+        const restante = Math.max(0, stats.capitalInvertido - ventasExposicion);
         this.balanceRestante.textContent = `$${restante.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
         // Recovery Progress

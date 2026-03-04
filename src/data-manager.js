@@ -301,6 +301,7 @@ class DataManager {
             precioUnitario: item.precio,
             totalVenta: item.precio * quantity,
             fecha: new Date().toISOString(),
+            itemFechaCreacion: item.fechaCreacion || null, // Guardar fecha de creación del item original
             vendedor: this.currentUser,
             cliente: cliente || "Consumidor Final",
             estado: estado // 'pagado' o 'deuda'
@@ -368,32 +369,48 @@ class DataManager {
 
     getFinancialStats(monthFilter = null) {
         const sales = this.dataCache.sales || [];
+        const inventory = this.dataCache.inventory || [];
         const month = monthFilter || "general";
 
         // Obtener capital para el mes específico (fallback al "general" si no existe para ese mes)
         const capitalInvertidoMap = this.dataCache.capitalInvertido || {};
         const capital = capitalInvertidoMap[month] !== undefined ? capitalInvertidoMap[month] : (capitalInvertidoMap["general"] || 0);
 
-        // Ventas Totales (Históricas) - Esto se usa para el estado de recuperación
+        // Ventas Totales (Históricas) - Esto se usa para el estado de recuperación global
         const totalVentas = sales.reduce((sum, s) => sum + (s.totalVenta || 0), 0);
 
-        // Ventas Mensuales (Filtradas)
-        let ventasMensuales = totalVentas;
+        // Ventas según el lote (mes de creación del item)
+        let ventasMensuales = 0;
         if (monthFilter) {
             ventasMensuales = sales
-                .filter(s => s.fecha.startsWith(monthFilter))
+                .filter(s => {
+                    // 1. Intentar usar la fecha guardada en la venta (para nuevas ventas)
+                    if (s.itemFechaCreacion) {
+                        return s.itemFechaCreacion.startsWith(monthFilter);
+                    }
+                    // 2. Fallback: buscar el item en el inventario actual
+                    const item = inventory.find(i => i.id === s.itemId);
+                    if (item && item.fechaCreacion) {
+                        return item.fechaCreacion.startsWith(monthFilter);
+                    }
+                    // 3. Última opción: usar la fecha de la venta (comportamiento anterior)
+                    return s.fecha.startsWith(monthFilter);
+                })
                 .reduce((sum, s) => sum + (s.totalVenta || 0), 0);
+        } else {
+            ventasMensuales = totalVentas;
         }
 
-        // Ganancia Neta: Ventas del mes vs Capital del mes
-        const gananciaNeta = (monthFilter ? ventasMensuales : totalVentas) - capital;
+        // Ganancia Neta: Ventas del filtro vs Capital del filtro
+        const gananciaNeta = ventasMensuales - capital;
 
-        // Porcentaje recuperado: Ventas totales vs Capital del mes (asumiendo que el capital es la inversión total para ese punto)
-        const porcentajeRecuperado = capital > 0 ? (totalVentas / capital) * 100 : 0;
+        // Porcentaje recuperado: Si hay filtro, se basa en las ventas del lote. Si no, en las totales.
+        const ventasParaRecuperacion = monthFilter ? ventasMensuales : totalVentas;
+        const porcentajeRecuperado = capital > 0 ? (ventasParaRecuperacion / capital) * 100 : 0;
 
         return {
             capitalInvertido: capital,
-            totalVentas: totalVentas,
+            totalVentas: totalVentas, // Mantenemos el histórico para el dashboard global
             ventasMensuales: ventasMensuales,
             gananciaNeta: gananciaNeta,
             porcentajeRecuperado: porcentajeRecuperado
