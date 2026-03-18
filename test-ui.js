@@ -1,0 +1,1 @@
+const fs = require('fs'); const src = fs.readFileSync('src/ui-controller.js', 'utf8'); try { new Function(src.replace('export default uiController;', '')); console.log('Syntax OK'); } catch(e) { console.error(e); }

@@ -7,6 +7,7 @@ class UIController {
         this.attachEventListeners();
         this.loadTheme();
         this.checkSession();
+        window.uiController = this; // Asegurar acceso global para eventos
     }
 
     initializeElements() {
@@ -29,13 +30,15 @@ class UIController {
 
         // Grids/Lists
         this.inventoryGrid = document.getElementById('inventoryGrid');
+        this.inventoryTableBody = document.getElementById('inventoryTableBody');
         this.salesTableBody = document.getElementById('salesTableBody');
         this.notesList = document.getElementById('notesList');
 
         // Inputs
         this.searchInput = document.getElementById('searchInput');
         this.filterCategory = document.getElementById('filterCategory');
-        this.salesFilterDate = document.getElementById('salesFilterDate');
+        this.salesMonthFilter = document.getElementById('salesMonthFilter'); // Nuevo
+        this.salesFilterCategory = document.getElementById('salesFilterCategory'); // Nuevo
         this.salesSearchInput = document.getElementById('salesSearchInput');
         this.noteInput = document.getElementById('noteInput');
 
@@ -49,6 +52,7 @@ class UIController {
         this.userInitialLetter = document.getElementById('userInitialLetter');
         this.btnExportExcel = document.getElementById('btnExportExcel');
         this.totalSalesAmount = document.getElementById('totalSalesAmount');
+        this.totalSalesMonthAmount = document.getElementById('totalSalesMonthAmount');
 
         // Balance View Elements
         this.balanceMonthFilter = document.getElementById('balanceMonthFilter');
@@ -89,6 +93,21 @@ class UIController {
         // New Elements
         this.inventoryMonthFilter = document.getElementById('inventoryMonthFilter');
         this.setInitialMonth();
+
+        // Image Upload Elements
+        this.productImagesGrid = document.getElementById('productImagesGrid');
+        this.btnUploadImage = document.getElementById('btnUploadImage');
+        this.fileInput = document.getElementById('fileInput');
+        this.currentProductImages = [];
+
+        // View Toggles
+        this.btnGridView = document.getElementById('btnGridView');
+        this.btnListView = document.getElementById('btnListView');
+        this.inventoryTableContainer = document.getElementById('inventoryTableContainer');
+        this.inventoryViewMode = localStorage.getItem('inventoryViewMode') || 'grid';
+        this.currentInventoryPage = 1;
+        this.inventoryPerPage = 12;
+        this.inventoryPagination = document.getElementById('inventoryPagination');
     }
 
     setInitialMonth() {
@@ -102,6 +121,9 @@ class UIController {
         }
         if (this.balanceMonthFilter) {
             this.balanceMonthFilter.value = currentMonth;
+        }
+        if (this.salesMonthFilter) {
+            this.salesMonthFilter.value = currentMonth;
         }
     }
 
@@ -133,12 +155,54 @@ class UIController {
         this.searchInput.addEventListener('input', () => this.filterInventory());
         this.filterCategory.addEventListener('change', () => this.filterInventory());
         if (this.inventoryMonthFilter) {
-            this.inventoryMonthFilter.addEventListener('change', () => this.filterInventory());
+            this.inventoryMonthFilter.addEventListener('change', () => {
+                // Sync with other filters
+                const val = this.inventoryMonthFilter.value;
+                if (this.balanceMonthFilter) this.balanceMonthFilter.value = val;
+                if (this.salesMonthFilter) this.salesMonthFilter.value = val;
+                this.filterInventory();
+                this.renderSales(); // Actualizar ventas también
+            });
+        }
+        if (this.balanceMonthFilter) {
+            this.balanceMonthFilter.addEventListener('change', () => {
+                // Sync with other filters
+                const val = this.balanceMonthFilter.value;
+                if (this.inventoryMonthFilter) this.inventoryMonthFilter.value = val;
+                if (this.salesMonthFilter) this.salesMonthFilter.value = val;
+                this.renderBalance();
+                this.updateStats();
+                this.renderInventory(); // Refresh inventory view
+                this.renderSales(); // Refresh sales view
+            });
+        }
+        if (this.salesMonthFilter) {
+            this.salesMonthFilter.addEventListener('change', () => {
+                const val = this.salesMonthFilter.value;
+                if (this.inventoryMonthFilter) this.inventoryMonthFilter.value = val;
+                if (this.balanceMonthFilter) this.balanceMonthFilter.value = val;
+                this.renderSales();
+                this.filterInventory(); // Refresh others
+                this.renderBalance();
+            });
         }
         const clearBtn = document.getElementById('clearMonthFilter');
         if (clearBtn) {
             clearBtn.addEventListener('click', () => {
                 this.inventoryMonthFilter.value = '';
+                if (this.balanceMonthFilter) this.balanceMonthFilter.value = '';
+                if (this.salesMonthFilter) this.salesMonthFilter.value = '';
+                this.filterInventory();
+                this.renderSales();
+            });
+        }
+        const clearSalesMonthBtn = document.getElementById('clearSalesMonthFilter');
+        if (clearSalesMonthBtn) {
+            clearSalesMonthBtn.addEventListener('click', () => {
+                this.salesMonthFilter.value = '';
+                if (this.inventoryMonthFilter) this.inventoryMonthFilter.value = '';
+                if (this.balanceMonthFilter) this.balanceMonthFilter.value = '';
+                this.renderSales();
                 this.filterInventory();
             });
         }
@@ -149,15 +213,16 @@ class UIController {
         });
 
         // Notes and focus
-        this.salesFilterDate.addEventListener('change', () => {
-            this.currentSalesPage = 1;
-            this.renderSales();
-        });
+        if (this.salesFilterCategory) {
+            this.salesFilterCategory.addEventListener('change', () => {
+                this.currentSalesPage = 1;
+                this.renderSales();
+            });
+        }
         this.salesSearchInput.addEventListener('input', () => {
             this.currentSalesPage = 1;
             this.renderSales();
         });
-        this.balanceMonthFilter.addEventListener('change', () => this.renderBalance());
         this.btnEditCapital.addEventListener('click', () => this.handleEditCapital());
 
         // Item Modal
@@ -208,7 +273,9 @@ class UIController {
         this.btnConfirmCancel.addEventListener('click', () => this.closeConfirm());
 
         // Event Delegation para el Inventario (más robusto)
-        this.inventoryGrid.addEventListener('click', (e) => {
+        const inventoryElements = [this.inventoryGrid, this.inventoryTableBody];
+        inventoryElements.forEach(el => {
+            el?.addEventListener('click', (e) => {
             const btn = e.target.closest('button[data-edit-id], button[data-delete-id], button[data-sell-id]');
             if (!btn) return;
 
@@ -226,16 +293,32 @@ class UIController {
             } else if (sellId) {
                 this.quickSell(sellId);
             }
+            });
         });
+
+        // Image Upload Listeners
+        if (this.btnUploadImage) {
+            this.btnUploadImage.addEventListener('click', () => this.fileInput.click());
+        }
+        if (this.fileInput) {
+            this.fileInput.addEventListener('change', (e) => this.handleImageUpload(e));
+        }
 
         // Data Sync
         dataManager.onDataSync((data) => {
+            console.log('🔄 Sincronización de datos recibida:', data.inventory.length, 'prendas');
             this.renderInventory(data.inventory);
             this.renderSales(data.sales);
             this.renderNotes(data.notes);
             this.renderBalance();
             this.updateStats();
         });
+
+        // View Toggles
+        this.btnGridView?.addEventListener('click', () => this.setInventoryViewMode('grid'));
+        this.btnListView?.addEventListener('click', () => this.setInventoryViewMode('list'));
+
+        this.updateStats();
     }
 
     // --- AUTENTICACIÓN ---
@@ -312,14 +395,15 @@ class UIController {
     // --- CARGA DE DATOS ---
 
     async loadData() {
-        const inventory = await dataManager.getInventory();
-        const sales = await dataManager.getSales();
-        const notes = await dataManager.getNotes();
+        console.log('🔌 Iniciando carga de datos...');
+        await dataManager.getInventory();
+        await dataManager.getSales();
+        await dataManager.getNotes();
 
-        this.renderInventory();
+        this.renderInventory(); // Ahora aplica filtros internamente
         this.renderSales();
         this.renderNotes();
-        this.updateMonthlyStats(dataManager.dataCache.inventory);
+        this.renderBalance();
         this.updateStats();
     }
 
@@ -340,14 +424,40 @@ class UIController {
 
         // Filtros
         const searchTerm = this.salesSearchInput.value.toLowerCase();
-        const filterDate = this.salesFilterDate.value;
+        const monthFilter = this.salesMonthFilter?.value || '';
+        const categoryFilter = this.salesFilterCategory?.value || '';
 
-        let filtered = sales;
-        if (searchTerm) {
-            filtered = filtered.filter(s => s.producto.toLowerCase().includes(searchTerm));
+        let filtered = [...sales];
+
+        // 1. Filtrar por el mes seleccionado (Lote)
+        if (monthFilter) {
+            filtered = filtered.filter(sale => {
+                if (sale.itemFechaCreacion) return sale.itemFechaCreacion.startsWith(monthFilter);
+                const item = dataManager.dataCache.inventory.find(i => i.id === sale.itemId);
+                if (item && item.fechaCreacion) return item.fechaCreacion.startsWith(monthFilter);
+                return sale.fecha.startsWith(monthFilter);
+            });
         }
-        if (filterDate) {
-            filtered = filtered.filter(s => s.fecha.startsWith(filterDate));
+
+        // 2. Filtrar por CATEGORÍA (Relacionada con el producto)
+        if (categoryFilter) {
+            filtered = filtered.filter(sale => {
+                const item = dataManager.dataCache.inventory.find(i => i.id === sale.itemId);
+                if (item) {
+                    return this.getDisplayCategory(item) === categoryFilter;
+                }
+                // Si no encontramos el item, intentamos un matching de texto simple si sale tiene itemTipo
+                if (sale.itemTipo) return sale.itemTipo.toLowerCase().includes(categoryFilter);
+                return false;
+            });
+        }
+
+        // 3. Filtrar por buscador
+        if (searchTerm) {
+            filtered = filtered.filter(s =>
+                s.producto.toLowerCase().includes(searchTerm) ||
+                (s.cliente && s.cliente.toLowerCase().includes(searchTerm))
+            );
         }
 
         // Paginación
@@ -384,7 +494,7 @@ class UIController {
                 <td><span class="info-value" style="font-size: 12px;">${sale.talla}</span></td>
                 <td><div style="font-size: 13px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sale.cliente}">${sale.cliente}</div></td>
                 <td>${sale.cantidad}</td>
-                <td style="color: #20e2d7; font-weight: bold;">$${sale.totalVenta.toFixed(2)}</td>
+                <td style="color: #329258ff; font-weight: bold;">$${sale.totalVenta.toFixed(2)}</td>
                 <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 <td>
                     <div style="display: flex; gap: 5px;">
@@ -629,85 +739,32 @@ class UIController {
 
     // --- INVENTARIO ---
 
-    renderInventory(inventory = null) {
-        const data = inventory || dataManager.dataCache.inventory;
+    setInventoryViewMode(mode) {
+        this.inventoryViewMode = mode;
+        localStorage.setItem('inventoryViewMode', mode);
 
-        if (!data || data.length === 0) {
-            this.inventoryGrid.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 60px; color: #666;">
-                    <div style="font-size: 48px; margin-bottom: 20px;">📦</div>
-                    <p>No hay prendas en el inventario</p>
-                    <p style="font-size: 14px; margin-top: 10px;">Haz clic en "+ Nueva Prenda" para comenzar</p>
-                </div>
-            `;
-            this.updateMonthlyStats([]);
-            return;
-        }
+        // Update Buttons
+        this.btnGridView.classList.toggle('active', mode === 'grid');
+        this.btnListView.classList.toggle('active', mode === 'list');
 
-        this.inventoryGrid.innerHTML = data.map(item => this.createItemCard(item)).join('');
-        this.updateMonthlyStats(data);
+        // Update Containers
+        this.inventoryGrid.style.display = mode === 'grid' ? 'grid' : 'none';
+        this.inventoryTableContainer.style.display = mode === 'list' ? 'block' : 'none';
+
+        this.renderInventory();
     }
 
-    createItemCard(item) {
-        const displayCategory = this.getDisplayCategory(item);
-        const categoryLabel = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
+    renderInventory(inventoryList = null) {
+        const baseData = inventoryList || dataManager.dataCache.inventory;
 
-        return `
-            <div class="card">
-                <div class="card-banner banner-${displayCategory}">
-                    <div class="category-pill">${categoryLabel}</div>
-                </div>
-                <div class="card-content">
-                    <div class="card-title">${item.tipo}</div>
-                    <div class="card-subtitle">${item.color}</div>
-                    
-                    <div class="card-details" style="margin-top: 10px;">
-                        <span class="detail-label" style="display: block; margin-bottom: 5px; font-size: 12px; opacity: 0.7;">Tallas en stock:</span>
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                            ${item.stockPorTalla ? Object.keys(item.stockPorTalla)
-                .filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0)
-                .map(t => `<span class="size-pill" style="font-size: 11px; background: rgba(67, 233, 123, 0.1); color: #43e97b; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(67, 233, 123, 0.2);" title="Talla ${t}">${t}: <b>${item.stockPorTalla[t]}</b></span>`)
-                .join('') : `<span class="size-pill" style="font-size: 11px; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">${item.talla}</span>`
-            }
-                        </div>
-                    </div>
+        // Obtener filtros actuales de la UI
+        const searchTerm = this.searchInput?.value.toLowerCase() || '';
+        const category = this.filterCategory?.value || '';
+        const monthFilter = this.inventoryMonthFilter?.value || '';
 
-                    <div class="card-stock" style="margin-top: 15px;">
-                        <div class="stock-label">Stock Total</div>
-                        <div class="stock-value">${item.cantidad}</div>
-                        <div class="stock-price" style="font-size: 20px;">$${item.precio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
-                    </div>
-                    
-                    ${item.fechaCreacion ? `
-                    <div class="creation-date" title="Fecha de ingreso: ${new Date(item.fechaCreacion).toLocaleString()}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        ${new Date(item.fechaCreacion).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </div>` : ''}
+        let filtered = [...baseData];
 
-                    <div class="card-actions">
-                        <button class="btn btn-sell-quick" data-sell-id="${item.id}" title="Registrar Venta">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-                            Vender
-                        </button>
-                        <button class="btn btn-edit" data-edit-id="${item.id}" title="Editar Prenda">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>
-                        <button class="btn btn-delete" data-delete-id="${item.id}" title="Eliminar Prenda">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    filterInventory() {
-        const searchTerm = this.searchInput.value.toLowerCase();
-        const category = this.filterCategory.value;
-        const monthFilter = this.inventoryMonthFilter ? this.inventoryMonthFilter.value : '';
-
-        let filtered = dataManager.dataCache.inventory;
-
+        // Aplicar búsqueda
         if (searchTerm) {
             filtered = filtered.filter(item =>
                 item.tipo.toLowerCase().includes(searchTerm) ||
@@ -716,22 +773,256 @@ class UIController {
             );
         }
 
+        // Aplicar categoría
         if (category) {
             filtered = filtered.filter(item => this.getDisplayCategory(item) === category);
         }
 
+        // Aplicar filtro de mes/lote
         if (monthFilter) {
             filtered = filtered.filter(item => {
-                // If item has no date, treat it as historical (only show if NO month filter is active or handle as old)
-                if (!item.fechaCreacion) return false;
-                return item.fechaCreacion.startsWith(monthFilter);
+                const itemDate = item.fechaCreacion || item.fecha || '';
+                return itemDate.startsWith(monthFilter);
             });
         }
 
-        // Calculate and update monthly stats based on current view
+        const totalItems = filtered.length;
+        const totalPages = Math.ceil(totalItems / this.inventoryPerPage);
+        
+        // Ajustar página actual si es necesario
+        if (this.currentInventoryPage > totalPages && totalPages > 0) {
+            this.currentInventoryPage = totalPages;
+        }
+
+        // Paginación
+        const start = (this.currentInventoryPage - 1) * this.inventoryPerPage;
+        const pagedItems = filtered.slice(start, start + this.inventoryPerPage);
+
+        // --- Renderizado según el modo ---
+        if (this.inventoryViewMode === 'grid') {
+            this.renderInventoryGrid(pagedItems, monthFilter);
+        } else {
+            this.renderInventoryList(pagedItems, monthFilter);
+        }
+
+        this.renderInventoryPagination(totalItems);
         this.updateMonthlyStats(filtered);
-        this.renderInventory(filtered);
     }
+
+    renderInventoryPagination(totalItems) {
+        if (!this.inventoryPagination) return;
+        
+        const totalPages = Math.ceil(totalItems / this.inventoryPerPage);
+        
+        if (totalPages <= 1) {
+            this.inventoryPagination.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        
+        // Botón Anterior
+        html += `
+            <button class="btn-page" id="prevInvPage" ${this.currentInventoryPage === 1 ? 'disabled' : ''}>
+                &laquo;
+            </button>
+        `;
+
+        // Páginas
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= this.currentInventoryPage - 1 && i <= this.currentInventoryPage + 1)) {
+                html += `
+                    <button class="btn-page ${i === this.currentInventoryPage ? 'active' : ''}" 
+                            data-inv-page="${i}">
+                        ${i}
+                    </button>
+                `;
+            } else if (i === 2 || i === totalPages - 1) {
+                html += `<span style="color: #666; padding: 0 5px;">...</span>`;
+            }
+        }
+
+        // Botón Siguiente
+        html += `
+            <button class="btn-page" id="nextInvPage" ${this.currentInventoryPage === totalPages ? 'disabled' : ''}>
+                &raquo;
+            </button>
+        `;
+
+        this.inventoryPagination.innerHTML = html;
+
+        // Listeners
+        this.inventoryPagination.querySelectorAll('[data-inv-page]').forEach(btn => {
+            btn.addEventListener('click', () => this.changeInventoryPage(parseInt(btn.getAttribute('data-inv-page'))));
+        });
+
+        const prev = document.getElementById('prevInvPage');
+        const next = document.getElementById('nextInvPage');
+
+        if (prev && this.currentInventoryPage > 1) {
+            prev.addEventListener('click', () => this.changeInventoryPage(this.currentInventoryPage - 1));
+        }
+
+        if (next && this.currentInventoryPage < totalPages) {
+            next.addEventListener('click', () => this.changeInventoryPage(this.currentInventoryPage + 1));
+        }
+    }
+
+    changeInventoryPage(page) {
+        this.currentInventoryPage = page;
+        this.renderInventory();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    renderInventoryGrid(filtered, monthFilter) {
+        if (filtered.length === 0) {
+            this.inventoryGrid.innerHTML = `
+                <div class="empty-state-box" style="grid-column: 1 / -1; width: 100%;">
+                    <div style="margin-bottom: 20px; opacity: 0.3;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                            <path d="m3.3 7 8.7 5 8.7-5"/>
+                            <path d="M12 22V12"/>
+                        </svg>
+                    </div>
+                    <h3 class="empty-state-title">
+                        ${monthFilter ? `No hay prendas registradas en ${monthFilter}` : 'No hay prendas registradas'}
+                    </h3>
+                    <p class="empty-state-text">Intenta ajustar los filtros de búsqueda</p>
+                </div>
+            `;
+        } else {
+            this.inventoryGrid.innerHTML = filtered.map(item => this.createItemCard(item)).join('');
+        }
+    }
+
+    renderInventoryList(filtered, monthFilter) {
+        this.inventoryTableBody.innerHTML = '';
+        if (filtered.length === 0) {
+            this.inventoryTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 50px; color: #64748b;">No se encontraron prendas</td></tr>`;
+        } else {
+            this.inventoryTableBody.innerHTML = filtered.map(item => this.createItemRow(item)).join('');
+        }
+    }
+
+    createItemRow(item) {
+        const displayCategory = this.getDisplayCategory(item);
+        const categoryLabel = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
+        const stockColor = this.getStockColor(item.cantidad);
+        const hasImages = item.images && item.images.length > 0;
+        const mainImage = hasImages ? item.images[0] : null;
+
+        const imgHtml = mainImage 
+            ? `<img src="${mainImage}" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover; object-position: top; margin-right: 12px; border: 1px solid rgba(255,255,255,0.1);" loading="lazy">`
+            : `<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.05); margin-right: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.02);"><svg width="18" height="18" opacity="0.2" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+
+        return `
+            <tr>
+                <td>
+                    <div style="display: flex; align-items: center;">
+                        ${imgHtml}
+                        <span style="font-weight: 600;" class="table-text-main">${item.tipo}</span>
+                    </div>
+                </td>
+                <td class="table-text-sub">${item.color}</td>
+                <td><span class="size-pill" style="font-size: 11px; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">${item.talla}</span></td>
+                <td style="font-weight: 700;">$${(item.precio || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: center; font-weight: 800; color: ${stockColor}; font-size: 16px;">${item.cantidad}</td>
+                <td><span class="category-pill-overlay banner-${displayCategory}" style="position: static; transform: none; display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px;">${categoryLabel}</span></td>
+                <td style="text-align: right;">
+                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                        <button class="btn-sell-quick" data-sell-id="${item.id}" title="Vender" style="width: 32px; height: 32px; background: #e63946; color: white; border: none; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                        </button>
+                        <button class="btn-edit-small" data-edit-id="${item.id}" title="Editar">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button class="btn-delete" data-delete-id="${item.id}" title="Eliminar" style="width: 32px; height: 32px; background: rgba(255, 51, 102, 0.05); border: 1px solid rgba(255, 51, 102, 0.1); color: #ff3366; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    filterInventory() {
+        this.currentInventoryPage = 1;
+        this.renderInventory();
+        this.updateStats();
+    }
+
+    createItemCard(item) {
+        const displayCategory = this.getDisplayCategory(item);
+        const categoryLabel = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
+        const hasImages = item.images && item.images.length > 0;
+        const precioFormatted = (item.precio || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 });
+
+        let imagesHtml = '';
+        if (!hasImages) {
+            imagesHtml = `<div class="no-image-placeholder">
+                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                               <polyline points="21 15 16 10 5 21"></polyline>
+                             </svg>
+                           </div>`;
+        } else if (item.images.length === 1) {
+            imagesHtml = `<img src="${item.images[0]}" alt="${item.tipo}" class="img-fit" loading="lazy">`;
+        } else {
+            const total = item.images.length;
+            imagesHtml = item.images.map((img, idx) => 
+                `<img src="${img}" alt="${item.tipo}" class="img-fit carousel-${total}-imgs" style="animation-delay: -${(total - idx) * 3}s" loading="lazy">`
+            ).join('');
+        }
+
+        return `
+            <div class="card">
+                <div class="card-image-container" style="height: 180px; position: relative; width: 100%; overflow: hidden;">
+                    ${imagesHtml}
+                    <div class="category-pill-overlay banner-${displayCategory}">${categoryLabel}</div>
+                </div>
+                <div class="card-content" style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <div class="card-title" style="font-size: 16px; margin: 0; line-height: 1.2;">${item.tipo}</div>
+                            <div class="card-subtitle" style="font-size: 12px; opacity: 0.6; margin-top: 2px;">${item.color}</div>
+                        </div>
+                        <div style="text-align: right; margin-left: 10px;">
+                            <div class="stock-price" style="font-size: 18px; margin: 0; color: #e63946;">$${precioFormatted}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stock-info-row" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                         <div style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1;">
+                            ${item.stockPorTalla ? Object.keys(item.stockPorTalla)
+                .filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0)
+                .map(t => `<span class="size-pill" style="font-size: 10px; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">${t}</span>`)
+                .join('') : `<span class="size-pill" style="font-size: 10px; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">${item.talla}</span>`
+            }
+                        </div>
+                        <div style="text-align: right; border-left: 1px solid rgba(255,255,255,0.05); padding-left: 10px;">
+                            <div style="font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Stock</div>
+                            <div style="font-size: 22px; font-weight: 800; color: ${this.getStockColor(item.cantidad)}; line-height: 1;">${item.cantidad}</div>
+                        </div>
+                    </div>
+
+                    <div class="card-actions" style="margin-top: auto; display: flex; gap: 8px;">
+                        <button class="btn-sell-quick" data-sell-id="${item.id}" style="flex: 1; padding: 10px 0; border-radius: 8px; font-weight: 700; font-size: 13px; border: none; cursor: pointer;">Vender</button>
+                        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                            <button class="btn-edit" data-edit-id="${item.id}" style="width: 38px; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; cursor: pointer;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button class="btn-delete" data-delete-id="${item.id}" style="width: 38px; height: 38px; background: rgba(255, 51, 102, 0.05); border: 1px solid rgba(255, 51, 102, 0.1); padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #ff3366; cursor: pointer; flex-shrink: 0;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Eliminamos el bloque anterior de filterInventory ya que ahora está arriba
 
     updateMonthlyStats(filteredItems) {
         const itemsCount = filteredItems.length;
@@ -767,6 +1058,79 @@ class UIController {
         return item.categoria || 'remeras';
     }
 
+    // --- IMAGE HANDLING ---
+
+    async handleImageUpload(e) {
+        let files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        const maxAvailable = 3 - this.currentProductImages.length;
+        if (maxAvailable <= 0) {
+            alert('Ya has alcanzado el máximo de 3 fotos');
+            return;
+        }
+
+        if (files.length > maxAvailable) {
+            alert(`Solo puedes subir ${maxAvailable} foto(s) más. Se seleccionarán las primeras ${maxAvailable}.`);
+            files = files.slice(0, maxAvailable);
+        }
+
+        // Disable upload button while uploading
+        this.btnUploadImage.classList.add('disabled');
+        const uploadLabel = this.btnUploadImage.querySelector('span');
+        const originalText = uploadLabel ? uploadLabel.textContent : 'Añadir Foto';
+        if (uploadLabel) uploadLabel.textContent = 'Subiendo...';
+
+        try {
+            for (const file of files) {
+                const imageUrl = await dataManager.uploadImage(file);
+                this.currentProductImages.push(imageUrl);
+            }
+            this.renderImagePreviews();
+        } catch (error) {
+            alert('Error al subir imagen: ' + error.message);
+        } finally {
+            this.btnUploadImage.classList.remove('disabled');
+            if (uploadLabel) uploadLabel.textContent = originalText;
+            this.fileInput.value = ''; // Reset input
+        }
+    }
+
+    renderImagePreviews() {
+        if (!this.productImagesGrid) return;
+        this.productImagesGrid.innerHTML = '';
+
+        this.currentProductImages.forEach((url, index) => {
+            const container = document.createElement('div');
+            container.className = 'image-preview-container';
+            container.style.width = '80px';
+            container.style.height = '80px';
+            container.innerHTML = `
+                <img src="${url}" alt="Preview ${index + 1}">
+                <button type="button" class="btn-remove-image" data-index="${index}">×</button>
+            `;
+            this.productImagesGrid.appendChild(container);
+        });
+
+        // Show/Hide upload button based on limit
+        if (this.btnUploadImage) {
+            this.btnUploadImage.style.display = this.currentProductImages.length >= 3 ? 'none' : 'flex';
+        }
+
+        // Attach listeners to remove buttons
+        document.querySelectorAll('.btn-remove-image').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.removeImage(index);
+            });
+        });
+    }
+
+    removeImage(index) {
+        this.currentProductImages.splice(index, 1);
+        this.renderImagePreviews();
+    }
+
     // --- MODAL DE ITEM ---
 
     selectCategoryChip(element) {
@@ -779,6 +1143,7 @@ class UIController {
     showItemModal(item = null) {
         this.currentEditingId = item ? item.id : null;
         const title = document.getElementById('itemModalTitle');
+        this.currentProductImages = item && item.images ? [...item.images] : [];
 
         if (item) {
             title.textContent = 'Editar Prenda';
@@ -810,6 +1175,8 @@ class UIController {
             const firstChip = document.querySelector('.category-chip');
             if (firstChip) this.selectCategoryChip(firstChip);
         }
+
+        this.renderImagePreviews();
 
         this.closeAllModals();
         this.itemModal.style.display = 'flex';
@@ -846,7 +1213,8 @@ class UIController {
             color: document.getElementById('itemColor').value.trim(),
             precio: precioNumerico,
             categoria: document.getElementById('itemCategoria').value,
-            stockPorTalla: stockPorTalla
+            stockPorTalla: stockPorTalla,
+            images: this.currentProductImages
         };
 
         if (!itemData.tipo || !itemData.color) {
@@ -873,7 +1241,7 @@ class UIController {
     }
 
     async editItem(id) {
-        const item = dataManager.dataCache.inventory.find(i => i.id === id);
+        const item = dataManager.dataCache.inventory.find(i => String(i.id) === String(id));
         if (item) {
             this.showItemModal(item);
         }
@@ -962,23 +1330,27 @@ class UIController {
 
         // Ganancia Neta color logic
         this.balanceGanancia.textContent = `$${stats.gananciaNeta.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-        this.balanceGanancia.style.color = stats.gananciaNeta >= 0 ? '#43e97b' : '#ff3366';
+        this.balanceGanancia.style.color = stats.gananciaNeta >= 0 ? 'rgb(33 107 58)' : '#ff3366';
 
         const ventasExposicion = monthFilter ? stats.ventasMensuales : stats.totalVentas;
         this.balanceTotalRecaudado.textContent = `$${ventasExposicion.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        this.balanceTotalRecaudado.style.color = '#e63946';
 
         const restante = Math.max(0, stats.capitalInvertido - ventasExposicion);
         this.balanceRestante.textContent = `$${restante.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        this.balanceRestante.style.color = restante > 0 ? '#ffffff' : 'rgb(33 107 58)';
 
         // Recovery Progress
         const percentage = Math.min(100, stats.porcentajeRecuperado).toFixed(1);
         this.recoveryPercentage.textContent = `${percentage}%`;
+        this.recoveryPercentage.style.color = 'rgb(33 107 58)';
         this.recoveryBar.style.width = `${percentage}%`;
 
         if (stats.porcentajeRecuperado >= 100) {
-            this.recoveryBar.style.background = 'linear-gradient(to right, #43e97b, #38f9d7)';
+            this.recoveryBar.style.background = 'rgb(33 107 58)';
+            this.recoveryBar.style.boxShadow = '0 0 10px rgba(33, 107, 58, 0.4)';
         } else {
-            this.recoveryBar.style.background = 'linear-gradient(to right, #ff5e62, #ff9966)';
+            this.recoveryBar.style.background = 'rgb(33 107 58)';
         }
     }
 
@@ -1085,14 +1457,39 @@ class UIController {
     updateStats() {
         const itemsCount = dataManager.getTotalItems();
         const stockSum = dataManager.getTotalStock();
-        const stats = dataManager.getFinancialStats();
+        // Usar inventoryMonthFilter como fuente de verdad para el mes
+        const currentMonth = this.inventoryMonthFilter?.value || '';
+        const stats = dataManager.getFinancialStats(currentMonth);
 
-        console.log('📈 UI Actualizando Estadísticas:', { itemsCount, stockSum });
+        console.log('📈 UI Actualizando Estadísticas:', { itemsCount, stockSum, currentMonth, stats });
 
-        if (this.totalItems) this.totalItems.textContent = itemsCount;
-        if (this.totalStock) this.totalStock.textContent = stockSum;
+        const salesColor = '#e63946'; // Rojo de marca para movimiento de dinero
+        const successColor = 'rgb(33 107 58)'; // Verde para éxito/ganancia
+
+        if (this.totalItems) {
+            this.totalItems.textContent = itemsCount;
+            this.totalItems.style.color = '#ffffff';
+        }
+        if (this.totalStock) {
+            this.totalStock.textContent = stockSum;
+            this.totalStock.style.color = this.getStockColor(stockSum);
+        }
+        if (this.totalItemsMonth) {
+            this.totalItemsMonth.textContent = stats.prendasMensuales || 0;
+            this.totalItemsMonth.style.color = '#ffffff';
+        }
+        if (this.totalStockMonth) {
+            this.totalStockMonth.textContent = stats.stockMensual || 0;
+            this.totalStockMonth.style.color = this.getStockColor(stats.stockMensual || 0);
+        }
+
         if (this.totalSalesAmount) {
             this.totalSalesAmount.textContent = `$${stats.totalVentas.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+            this.totalSalesAmount.style.color = salesColor;
+        }
+        if (this.totalSalesMonthAmount) {
+            this.totalSalesMonthAmount.textContent = `$${stats.ventasMensuales.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+            this.totalSalesMonthAmount.style.color = salesColor;
         }
     }
 
@@ -1123,6 +1520,15 @@ class UIController {
     }
 
     // --- NOTIFICACIONES ---
+
+    getStockColor(count) {
+        const qty = parseInt(count) || 0;
+        if (qty === 0) return '#ff3366'; // Rojo crítico (Agotado)
+        if (qty <= 2) return '#ff9f43';  // Naranja (Stock muy bajo)
+        if (qty <= 5) return '#bbf7d0';  // Verde muy claro (Poco stock)
+        if (qty <= 15) return '#4ade80'; // Verde brillante (Stock saludable)
+        return '#15803d';                // Verde intenso (Stock abundante)
+    }
 
     showNotification(message) {
         const notification = document.createElement('div');

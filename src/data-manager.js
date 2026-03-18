@@ -37,6 +37,10 @@ class DataManager {
         };
         this.unsubscribe = null;
         this.syncCallbacks = [];
+
+        // Cloudinary Config
+        this.cloudinaryCloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        this.cloudinaryUploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
     }
 
     // --- AUTENTICACIÓN ---
@@ -175,13 +179,14 @@ class DataManager {
             cantidad: totalCantidad,
             precio: parseFloat(itemData.precio) || 0,
             categoria: itemData.categoria,
+            images: itemData.images || [], // Máximo 3 fotos
             fechaCreacion: new Date().toISOString(),
             ultimaModificacion: new Date().toISOString(),
             creadoPor: this.currentUser
         };
 
         this.dataCache.inventory.push(newItem);
-        await this.saveInventory();
+        await this.saveAllData(); // Cambiado de saveInventory a saveAllData para consistencia
         return newItem;
     }
 
@@ -203,9 +208,10 @@ class DataManager {
                 cantidad: totalCantidad,
                 precio: parseFloat(itemData.precio) || 0,
                 categoria: itemData.categoria,
+                images: itemData.images || [], // Actualizar fotos
                 ultimaModificacion: new Date().toISOString()
             };
-            await this.saveInventory();
+            await this.saveAllData();
             return true;
         }
         return false;
@@ -372,9 +378,15 @@ class DataManager {
         const inventory = this.dataCache.inventory || [];
         const month = monthFilter || "general";
 
-        // Obtener capital para el mes específico (fallback al "general" si no existe para ese mes)
+        // Obtener capital para el mes específico. 
+        // Si hay mes pero no hay capital cargado para ese mes, es 0 (no usamos general como fallback si el usuario está filtrando un lote específico)
         const capitalInvertidoMap = this.dataCache.capitalInvertido || {};
-        const capital = capitalInvertidoMap[month] !== undefined ? capitalInvertidoMap[month] : (capitalInvertidoMap["general"] || 0);
+        let capital = 0;
+        if (monthFilter) {
+            capital = capitalInvertidoMap[monthFilter] || 0;
+        } else {
+            capital = capitalInvertidoMap["general"] || 0;
+        }
 
         // Ventas Totales (Históricas) - Esto se usa para el estado de recuperación global
         const totalVentas = sales.reduce((sum, s) => sum + (s.totalVenta || 0), 0);
@@ -408,12 +420,26 @@ class DataManager {
         const ventasParaRecuperacion = monthFilter ? ventasMensuales : totalVentas;
         const porcentajeRecuperado = capital > 0 ? (ventasParaRecuperacion / capital) * 100 : 0;
 
+        // Nuevas métricas para el sidebar
+        let prendasMensuales = 0;
+        let stockMensual = 0;
+        if (monthFilter) {
+            const filteredInventory = inventory.filter(i => (i.fechaCreacion || i.fecha || '').startsWith(monthFilter));
+            prendasMensuales = filteredInventory.length;
+            stockMensual = filteredInventory.reduce((sum, i) => sum + (parseInt(i.cantidad) || 0), 0);
+        } else {
+            prendasMensuales = inventory.length;
+            stockMensual = inventory.reduce((sum, i) => sum + (parseInt(i.cantidad) || 0), 0);
+        }
+
         return {
             capitalInvertido: capital,
-            totalVentas: totalVentas, // Mantenemos el histórico para el dashboard global
+            totalVentas: totalVentas,
             ventasMensuales: ventasMensuales,
             gananciaNeta: gananciaNeta,
-            porcentajeRecuperado: porcentajeRecuperado
+            porcentajeRecuperado: porcentajeRecuperado,
+            prendasMensuales,
+            stockMensual
         };
     }
 
@@ -625,6 +651,41 @@ class DataManager {
             console.error("Error al exportar reporte de balance:", error);
             alert("Error al exportar reporte de balance.");
             return false;
+        }
+    }
+
+    // --- CLOUDINARY UPLOAD ---
+
+    async uploadImage(file) {
+        if (!this.cloudinaryCloudName || !this.cloudinaryUploadPreset) {
+            console.error("Cloudinary config missing");
+            throw new Error("Configuración de Cloudinary ausente. Por favor configura VITE_CLOUDINARY_CLOUD_NAME y VITE_CLOUDINARY_UPLOAD_PRESET en el archivo .env");
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", this.cloudinaryUploadPreset);
+        formData.append("folder", `AppcontrolStock`);
+
+        try {
+            const response = await fetch(
+                `https://api.cloudinary.com/v1_1/${this.cloudinaryCloudName}/image/upload`,
+                {
+                    method: "POST",
+                    body: formData,
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error.message || "Error al subir imagen a Cloudinary");
+            }
+
+            const data = await response.json();
+            return data.secure_url;
+        } catch (error) {
+            console.error("Error uploading to Cloudinary:", error);
+            throw error;
         }
     }
 
