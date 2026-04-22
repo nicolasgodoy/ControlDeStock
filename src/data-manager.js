@@ -162,53 +162,64 @@ class DataManager {
     }
 
     async addItem(itemData) {
-        // itemData.stockPorTalla es un objeto: { "M": 10, "L": 5 }
-        const stockPorTalla = itemData.stockPorTalla || {};
-        const totalCantidad = Object.values(stockPorTalla).reduce((a, b) => a + (parseInt(b) || 0), 0);
+        // itemData.colores: [{ color, image, stockPorTalla }]
+        const colores = (itemData.colores || []).map(v => {
+            const stockPorTalla = v.stockPorTalla || {};
+            const cantidad = Object.values(stockPorTalla).reduce((a, b) => a + (parseInt(b) || 0), 0);
+            const tallasDisponibles = Object.keys(stockPorTalla).filter(t => (parseInt(stockPorTalla[t]) || 0) > 0);
+            return {
+                color: (v.color || '').trim(),
+                image: v.image || null,
+                stockPorTalla,
+                cantidad,
+                talla: tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : 'Sin stock'
+            };
+        }).filter(v => v.color);
 
-        // Determinar talla descriptiva para compatibilidad (ej: "M, L")
-        const tallasDisponibles = Object.keys(stockPorTalla).filter(t => (parseInt(stockPorTalla[t]) || 0) > 0);
-        const tallaLabel = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : "Sin stock";
+        const totalCantidad = colores.reduce((sum, v) => sum + v.cantidad, 0);
 
         const newItem = {
             id: this.generateId(),
             tipo: itemData.tipo,
-            talla: tallaLabel, // Etiqueta para vista rápida
-            stockPorTalla: stockPorTalla, // Nuevo campo detallado
-            color: itemData.color,
+            colores,
             cantidad: totalCantidad,
             precio: parseFloat(itemData.precio) || 0,
             categoria: itemData.categoria,
-            images: itemData.images || [], // Máximo 3 fotos
             fechaCreacion: new Date().toISOString(),
             ultimaModificacion: new Date().toISOString(),
             creadoPor: this.currentUser
         };
 
         this.dataCache.inventory.push(newItem);
-        await this.saveAllData(); // Cambiado de saveInventory a saveAllData para consistencia
+        await this.saveAllData();
         return newItem;
     }
 
     async updateItem(id, itemData) {
         const index = this.dataCache.inventory.findIndex(item => item.id === id);
         if (index !== -1) {
-            const stockPorTalla = itemData.stockPorTalla || {};
-            const totalCantidad = Object.values(stockPorTalla).reduce((a, b) => a + (parseInt(b) || 0), 0);
+            const colores = (itemData.colores || []).map(v => {
+                const stockPorTalla = v.stockPorTalla || {};
+                const cantidad = Object.values(stockPorTalla).reduce((a, b) => a + (parseInt(b) || 0), 0);
+                const tallasDisponibles = Object.keys(stockPorTalla).filter(t => (parseInt(stockPorTalla[t]) || 0) > 0);
+                return {
+                    color: (v.color || '').trim(),
+                    image: v.image || null,
+                    stockPorTalla,
+                    cantidad,
+                    talla: tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : 'Sin stock'
+                };
+            }).filter(v => v.color);
 
-            const tallasDisponibles = Object.keys(stockPorTalla).filter(t => (parseInt(stockPorTalla[t]) || 0) > 0);
-            const tallaLabel = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : "Sin stock";
+            const totalCantidad = colores.reduce((sum, v) => sum + v.cantidad, 0);
 
             this.dataCache.inventory[index] = {
                 ...this.dataCache.inventory[index],
                 tipo: itemData.tipo,
-                talla: tallaLabel,
-                stockPorTalla: stockPorTalla,
-                color: itemData.color,
+                colores,
                 cantidad: totalCantidad,
                 precio: parseFloat(itemData.precio) || 0,
                 categoria: itemData.categoria,
-                images: itemData.images || [], // Actualizar fotos
                 ultimaModificacion: new Date().toISOString()
             };
             await this.saveAllData();
@@ -265,58 +276,79 @@ class DataManager {
         return [];
     }
 
-    async registerSale(itemId, quantity, cliente = "Consumidor Final", estado = "pagado", tallaSeleccionada = null) {
+    async registerSale(itemId, quantity, cliente = "Consumidor Final", estado = "pagado", tallaSeleccionada = null, colorSeleccionado = null) {
         const itemIndex = this.dataCache.inventory.findIndex(i => i.id === itemId);
         if (itemIndex === -1) return { success: false, message: "Producto no encontrado" };
 
         const item = this.dataCache.inventory[itemIndex];
 
-        // Verificar stock de la talla específica
-        if (tallaSeleccionada && item.stockPorTalla) {
-            const stockTalla = parseInt(item.stockPorTalla[tallaSeleccionada]) || 0;
-            if (stockTalla < quantity) {
-                return { success: false, message: `Stock insuficiente en talla ${tallaSeleccionada} (disponible: ${stockTalla})` };
+        if (item.colores && Array.isArray(item.colores)) {
+            // --- Nuevo formato multi-color ---
+            const varianteIdx = item.colores.findIndex(v => v.color === colorSeleccionado);
+            if (varianteIdx === -1) return { success: false, message: "Color no encontrado" };
+
+            const variante = item.colores[varianteIdx];
+
+            if (tallaSeleccionada && variante.stockPorTalla) {
+                const stockTalla = parseInt(variante.stockPorTalla[tallaSeleccionada]) || 0;
+                if (stockTalla < quantity) {
+                    return { success: false, message: `Stock insuficiente en talla ${tallaSeleccionada} (disponible: ${stockTalla})` };
+                }
+                variante.stockPorTalla[tallaSeleccionada] = stockTalla - quantity;
+            } else {
+                if ((variante.cantidad || 0) < quantity) {
+                    return { success: false, message: "Stock insuficiente" };
+                }
             }
-            // Descontar de la talla específica
-            item.stockPorTalla[tallaSeleccionada] = stockTalla - quantity;
+
+            variante.cantidad = (variante.cantidad || 0) - quantity;
+            const tallasDisponibles = Object.keys(variante.stockPorTalla || {}).filter(t => (parseInt(variante.stockPorTalla[t]) || 0) > 0);
+            variante.talla = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : 'Sin stock';
+            item.cantidad = item.colores.reduce((sum, v) => sum + (v.cantidad || 0), 0);
+            item.ultimaModificacion = new Date().toISOString();
+
         } else {
-            // Fallback para items sin stockPorTalla (migrados)
-            if (item.cantidad < quantity) {
-                return { success: false, message: "Stock insuficiente" };
+            // --- Formato legacy ---
+            if (tallaSeleccionada && item.stockPorTalla) {
+                const stockTalla = parseInt(item.stockPorTalla[tallaSeleccionada]) || 0;
+                if (stockTalla < quantity) {
+                    return { success: false, message: `Stock insuficiente en talla ${tallaSeleccionada} (disponible: ${stockTalla})` };
+                }
+                item.stockPorTalla[tallaSeleccionada] = stockTalla - quantity;
+            } else {
+                if (item.cantidad < quantity) {
+                    return { success: false, message: "Stock insuficiente" };
+                }
+            }
+            item.cantidad -= quantity;
+            item.ultimaModificacion = new Date().toISOString();
+            if (item.stockPorTalla) {
+                const tallasDisponibles = Object.keys(item.stockPorTalla).filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0);
+                item.talla = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : 'Sin stock';
             }
         }
 
-        // 1. Descontar stock total
-        item.cantidad -= quantity;
-        item.ultimaModificacion = new Date().toISOString();
-
-        // Actualizar etiqueta de tallas
-        if (item.stockPorTalla) {
-            const tallasDisponibles = Object.keys(item.stockPorTalla).filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0);
-            item.talla = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : "Sin stock";
-        }
-
-        // 2. Registrar venta
+        // Registrar venta
+        const colorParaVenta = colorSeleccionado || item.color || '';
         const newSale = {
             id: this.generateId(),
             itemId: item.id,
             producto: item.tipo,
-            talla: tallaSeleccionada || item.talla,
-            color: item.color,
+            talla: tallaSeleccionada || 'Sin talla',
+            color: colorParaVenta,
             cantidad: quantity,
             precioUnitario: item.precio,
             totalVenta: item.precio * quantity,
             fecha: new Date().toISOString(),
-            itemFechaCreacion: item.fechaCreacion || null, // Guardar fecha de creación del item original
+            itemFechaCreacion: item.fechaCreacion || null,
             vendedor: this.currentUser,
             cliente: cliente || "Consumidor Final",
-            estado: estado // 'pagado' o 'deuda'
+            estado: estado
         };
 
         if (!this.dataCache.sales) this.dataCache.sales = [];
         this.dataCache.sales.unshift(newSale);
 
-        // 3. Guardar todo
         const saved = await this.saveAllData();
         return { success: saved, sale: newSale };
     }
@@ -345,17 +377,29 @@ class DataManager {
             const itemIndex = this.dataCache.inventory.findIndex(i => i.id === sale.itemId);
             if (itemIndex !== -1) {
                 const item = this.dataCache.inventory[itemIndex];
-                item.cantidad += sale.cantidad;
 
-                // Restaurar en la talla específica si existe
-                if (sale.talla && item.stockPorTalla && item.stockPorTalla[sale.talla] !== undefined) {
-                    item.stockPorTalla[sale.talla] = (parseInt(item.stockPorTalla[sale.talla]) || 0) + sale.cantidad;
-
-                    // Actualizar etiqueta tallas
-                    const tallasDisponibles = Object.keys(item.stockPorTalla).filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0);
-                    item.talla = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : "Sin stock";
+                if (item.colores && Array.isArray(item.colores)) {
+                    // Nuevo formato: restaurar a la variante correcta
+                    const varianteIdx = item.colores.findIndex(v => v.color === sale.color);
+                    if (varianteIdx !== -1) {
+                        const variante = item.colores[varianteIdx];
+                        variante.cantidad = (variante.cantidad || 0) + sale.cantidad;
+                        if (sale.talla && variante.stockPorTalla && variante.stockPorTalla[sale.talla] !== undefined) {
+                            variante.stockPorTalla[sale.talla] = (parseInt(variante.stockPorTalla[sale.talla]) || 0) + sale.cantidad;
+                            const tallasDisponibles = Object.keys(variante.stockPorTalla).filter(t => (parseInt(variante.stockPorTalla[t]) || 0) > 0);
+                            variante.talla = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : 'Sin stock';
+                        }
+                        item.cantidad = item.colores.reduce((sum, v) => sum + (v.cantidad || 0), 0);
+                    }
+                } else {
+                    // Formato legacy
+                    item.cantidad += sale.cantidad;
+                    if (sale.talla && item.stockPorTalla && item.stockPorTalla[sale.talla] !== undefined) {
+                        item.stockPorTalla[sale.talla] = (parseInt(item.stockPorTalla[sale.talla]) || 0) + sale.cantidad;
+                        const tallasDisponibles = Object.keys(item.stockPorTalla).filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0);
+                        item.talla = tallasDisponibles.length > 0 ? tallasDisponibles.join(', ') : 'Sin stock';
+                    }
                 }
-
                 item.ultimaModificacion = new Date().toISOString();
             }
         }
@@ -426,10 +470,16 @@ class DataManager {
         if (monthFilter) {
             const filteredInventory = inventory.filter(i => (i.fechaCreacion || i.fecha || '').startsWith(monthFilter));
             prendasMensuales = filteredInventory.length;
-            stockMensual = filteredInventory.reduce((sum, i) => sum + (parseInt(i.cantidad) || 0), 0);
+            stockMensual = filteredInventory.reduce((sum, i) => {
+                if (i.colores && Array.isArray(i.colores)) return sum + i.colores.reduce((s, v) => s + (parseInt(v.cantidad) || 0), 0);
+                return sum + (parseInt(i.cantidad) || 0);
+            }, 0);
         } else {
             prendasMensuales = inventory.length;
-            stockMensual = inventory.reduce((sum, i) => sum + (parseInt(i.cantidad) || 0), 0);
+            stockMensual = inventory.reduce((sum, i) => {
+                if (i.colores && Array.isArray(i.colores)) return sum + i.colores.reduce((s, v) => s + (parseInt(v.cantidad) || 0), 0);
+                return sum + (parseInt(i.cantidad) || 0);
+            }, 0);
         }
 
         return {
@@ -703,13 +753,12 @@ class DataManager {
 
     getTotalStock() {
         if (!this.dataCache.inventory) return 0;
-
         const total = this.dataCache.inventory.reduce((sum, item) => {
-            // Asegurar que cantidad sea un número para evitar errores de tipo sum + "10" = "010"
-            const qty = parseInt(item.cantidad) || 0;
-            return sum + qty;
+            if (item.colores && Array.isArray(item.colores)) {
+                return sum + item.colores.reduce((s, v) => s + (parseInt(v.cantidad) || 0), 0);
+            }
+            return sum + (parseInt(item.cantidad) || 0);
         }, 0);
-
         console.log('📊 Calculando Stock Total (unidades):', total);
         return total;
     }

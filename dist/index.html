@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Stock - Ropa</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script type="module" crossorigin src="/assets/index-CweDs8Bn.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-BgSpTNXg.css">
+  <script type="module" crossorigin src="/assets/index-DlIcORY5.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DIZwvVfn.css">
 </head>
 
 <body>
@@ -15,7 +15,14 @@
     <div id="loginModal" class="modal" style="display: flex;">
         <div class="modal-content" style="max-width: 450px;">
             <div class="modal-header" style="justify-content: center;">
-                <h2>🔐 Acceso al Sistema</h2>
+                <h2 style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e63946" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px;">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    Acceso al Sistema
+                </h2>
             </div>
             <div class="modal-body">
                 <p style="color: #ccc; margin-bottom: 25px; font-size: 14px; text-align: center;">
@@ -132,7 +139,7 @@
                         </div>
                         <div class="stats-row">
                             <span class="stats-label">Ventas Totales:</span>
-                            <span id="totalSalesAmount" class="stats-value" style="color: #43e97b;">$0.00</span>
+                            <span id="totalSalesAmount" class="stats-value">$0.00</span>
                         </div>
                         <div class="sidebar-divider" style="margin: 15px 0;"></div>
                         <div class="stats-row" style="opacity: 0.9;">
@@ -142,6 +149,10 @@
                         <div class="stats-row" style="opacity: 0.9;">
                             <span class="stats-label">Stock Mes:</span>
                             <span id="totalStockMonth" class="stats-value accent">0</span>
+                        </div>
+                        <div class="stats-row" style="opacity: 0.9;">
+                            <span class="stats-label">Ventas Mes:</span>
+                            <span id="totalSalesMonthAmount" class="stats-value">$0.00</span>
                         </div>
                     </div>
                 </div>
@@ -184,15 +195,40 @@
             <main id="viewInventory" class="vista-activa">
                 <section class="history-container">
                     <div class="header-filter-row" style="margin-bottom: 30px;">
-                        <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff8c42"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 8V21H3V8" />
-                                <path d="M1 3H23V8H1V3Z" />
-                                <path d="M10 12H14" />
-                            </svg>
-                            Inventario de Prendas
-                        </h2>
+                        <div
+                            style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px; flex-wrap: wrap;">
+                            <h2 class="view-title">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e63946"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 8V21H3V8" />
+                                    <path d="M1 3H23V8H1V3Z" />
+                                    <path d="M10 12H14" />
+                                </svg>
+                                Inventario
+                            </h2>
+                            <div class="view-toggles">
+                                <button id="btnGridView" class="view-toggle-btn active" title="Vista Cuadrícula">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="3" y="3" width="7" height="7" />
+                                        <rect x="14" y="3" width="7" height="7" />
+                                        <rect x="14" y="14" width="7" height="7" />
+                                        <rect x="3" y="14" width="7" height="7" />
+                                    </svg>
+                                </button>
+                                <button id="btnListView" class="view-toggle-btn" title="Vista Tabla">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="8" y1="6" x2="21" y2="6" />
+                                        <line x1="8" y1="12" x2="21" y2="12" />
+                                        <line x1="8" y1="18" x2="21" y2="18" />
+                                        <line x1="3" y1="6" x2="3.01" y2="6" />
+                                        <line x1="3" y1="12" x2="3.01" y2="12" />
+                                        <line x1="3" y1="18" x2="3.01" y2="18" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
                         <div>
                             <div class="search-container-small">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -211,6 +247,9 @@
                                 <button type="button" id="clearMonthFilter" class="btn-step" title="Ver Histórico"
                                     style="width: 20px; height: 20px; font-size: 10px; margin-left: -5px;">×</button>
                             </label>
+                            <select id="filterColor" class="input-hours" style="width: auto;">
+                                <option value="">Todos los colores</option>
+                            </select>
                             <select id="filterCategory" class="input-hours" style="width: auto;">
                                 <option value="">Todas</option>
                                 <option value="remeras">Remeras</option>
@@ -236,6 +275,30 @@
                     <section id="inventoryGrid" class="Contenido-Grid-Cards">
                         <!-- Las cards se inyectan aquí -->
                     </section>
+
+                    <div id="inventoryTableContainer"
+                        style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; overflow-x: auto; margin-top: 20px;">
+                        <table class="inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Color</th>
+                                    <th>Talla</th>
+                                    <th>Precio</th>
+                                    <th style="text-align: center;">Stock</th>
+                                    <th>Categoría</th>
+                                    <th style="text-align: right;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTableBody">
+                                <!-- Las filas se inyectan aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="inventoryPagination" class="pagination-container" style="margin-top: 30px;">
+                        <!-- Paginación inyectada por JS -->
+                    </div>
                 </section>
             </main>
 
@@ -243,8 +306,8 @@
             <main id="viewSales" style="display: none;">
                 <section class="history-container">
                     <div class="header-filter-row" style="margin-bottom: 30px;">
-                        <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff8c42"
+                        <h2 class="view-title">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e63946"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="1" x2="12" y2="23" />
                                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -260,13 +323,35 @@
                                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                                 </svg>
                                 <input type="text" id="salesSearchInput" class="input-hours"
-                                    placeholder="Buscar producto..." style="padding-left: 35px;">
+                                    placeholder="Buscar producto o cliente..." style="padding-left: 35px;">
                             </div>
-                            <label for="salesFilterDate" class="filter-label-group">
-                                <span style="color: #94a3b8; font-size: 13px;">Filtrar:</span>
-                                <input type="date" id="salesFilterDate" class="input-hours" style="width: auto;"
+                            <label for="salesMonthFilter" class="filter-label-group">
+                                <span style="color: #94a3b8; font-size: 13px;">Mes:</span>
+                                <input type="month" id="salesMonthFilter" class="input-hours" style="width: auto;"
                                     onclick="this.showPicker()">
+                                <button type="button" id="clearSalesMonthFilter" class="btn-step" title="Ver Histórico"
+                                    style="width: 20px; height: 20px; font-size: 10px; margin-left: -5px;">×</button>
                             </label>
+                            <select id="salesFilterCategory" class="input-hours" style="width: auto;">
+                                <option value="">Todas</option>
+                                <option value="remeras">Remeras</option>
+                                <option value="musculosas">Musculosas</option>
+                                <option value="pantalones">Pantalones</option>
+                                <option value="palazos">Palazos</option>
+                                <option value="monos">Monos</option>
+                                <option value="shorts">Shorts</option>
+                                <option value="polleras">Polleras</option>
+                                <option value="calzas">Calzas</option>
+                                <option value="catsuit">Catsuit</option>
+                                <option value="vestidos">Vestidos</option>
+                                <option value="abrigos">Abrigos</option>
+                                <option value="sudaderas">Sudaderas</option>
+                                <option value="conjuntos">Conjuntos</option>
+                                <option value="medias">Medias</option>
+                                <option value="accesorios">Accesorios</option>
+                                <option value="calzado">Calzado</option>
+                                <option value="otros">Otros</option>
+                            </select>
                         </div>
                     </div>
 
@@ -299,7 +384,14 @@
             <!-- Vista Notas -->
             <main id="viewNotes" style="display: none;">
                 <section class="history-container">
-                    <h2 style="margin-bottom: 25px; color: white;">📝 Notas Compartidas</h2>
+                    <h2 style="margin-bottom: 25px; color: white; display: flex; align-items: center;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e63946" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px;">
+                            <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"></path>
+                            <path d="M15 3v6h6"></path>
+                        </svg>
+                        Notas Compartidas
+                    </h2>
 
                     <div class="add-note-container" style="margin-bottom: 30px; display: flex; gap: 10px;">
                         <input type="text" id="noteInput" class="note-input-premium"
@@ -318,7 +410,7 @@
                 <section class="history-container">
                     <div class="header-filter-row" style="margin-bottom: 30px;">
                         <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#43e97b"
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e63946"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                             </svg>
@@ -338,7 +430,7 @@
                             <div class="finance-header">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div class="finance-icon-box"
-                                        style="background: rgba(255, 107, 53, 0.1); color: #ff6b35;">
+                                        style="background: rgba(230, 57, 70, 0.1); color: #e63946;">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                                             stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                             stroke-linejoin="round">
@@ -363,7 +455,7 @@
                             <div class="finance-header">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div class="finance-icon-box"
-                                        style="background: rgba(67, 233, 123, 0.1); color: #43e97b;">
+                                        style="background: rgba(230, 57, 70, 0.1); color: #e63946;">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                                             stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                             stroke-linejoin="round">
@@ -382,7 +474,7 @@
                             <div class="finance-header">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div class="finance-icon-box"
-                                        style="background: rgba(32, 226, 215, 0.1); color: #20e2d7;">
+                                        style="background: rgba(33, 107, 58, 0.1); color: rgb(33 107 58);">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                                             stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                             stroke-linejoin="round">
@@ -399,7 +491,15 @@
 
                     <div class="recovery-section">
                         <div class="recovery-header">
-                            <span class="recovery-title">📊 Estado de Recuperación</span>
+                            <span class="recovery-title" style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgb(33 107 58)"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                                Estado de Recuperación
+                            </span>
                             <span class="recovery-percentage" id="recoveryPercentage">0%</span>
                         </div>
                         <div class="recovery-bar-container">
@@ -437,194 +537,106 @@
 
             <!-- Body (Scrollable) -->
             <div class="modal-body">
-                <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                <!-- Fila superior: Tipo y Precio -->
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <div class="form-group" style="flex: 2; min-width: 200px;">
+                        <label for="itemTipo">Tipo de Prenda:</label>
+                        <input type="text" id="itemTipo" class="input-hours" placeholder="Ej: Remera, Jean, etc.">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 130px;">
+                        <label for="itemPrecio">Precio:</label>
+                        <input type="text" id="itemPrecio" class="input-hours" placeholder="Ej: 10000" inputmode="decimal">
+                    </div>
+                </div>
 
-                    <!-- Left Column: Info & Category -->
-                    <div style="flex: 1; min-width: 350px; display: flex; flex-direction: column; gap: 20px;">
-                        <div class="modal-row" style="flex-direction: column; gap: 15px;">
-                            <div class="form-group">
-                                <label for="itemTipo">Tipo de Prenda:</label>
-                                <input type="text" id="itemTipo" class="input-hours"
-                                    placeholder="Ej: Remera, Jean, etc.">
-                            </div>
-                            <div class="form-group">
-                                <label for="itemColor">Color/Descripción:</label>
-                                <input type="text" id="itemColor" class="input-hours"
-                                    placeholder="Ej: Negro, Azul, etc.">
-                            </div>
-                            <div class="form-group">
-                                <label for="itemPrecio">Precio:</label>
-                                <input type="text" id="itemPrecio" class="input-hours" placeholder="Ej: 10.000 o 10000"
-                                    inputmode="decimal">
-                            </div>
+                <!-- Variantes de color (generadas dinámicamente por JS) -->
+                <div id="colorVariantsContainer" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
+                    <!-- JS renderiza aquí las variantes de color -->
+                </div>
+
+                <!-- Botón agregar variante -->
+                <button type="button" id="btnAddColorVariant" style="width: 100%; padding: 10px; border: 1px dashed rgba(230,57,70,0.4); background: rgba(230,57,70,0.05); color: #e63946; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Agregar otro color (máx. 3)
+                </button>
+
+                <!-- File input oculto compartido para variantes -->
+                <input type="file" id="variantFileInput" accept="image/*" style="display: none;">
+
+                <!-- Full Width Categories -->
+                <div class="form-group modal-section-box" style="margin-top: 20px; padding: 20px;">
+                    <label class="modal-section-title">Categoría:</label>
+                    <div class="category-chips-grid" style="grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px;">
+                        <div class="category-chip" data-color="remeras">
+                            <span class="chip-color" style="background: linear-gradient(to right, #ff5e62, #ff9966);"></span>
+                            <span class="chip-label">Remeras</span>
                         </div>
-
-                        <div class="form-group">
-                            <label style="margin-bottom: 15px; display: block;">Seleccionar Categoría:</label>
-                            <div class="category-chips-grid">
-                                <div class="category-chip" data-color="remeras">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #ff5e62, #ff9966);"></span>
-                                    <span class="chip-label">Remeras</span>
-                                </div>
-                                <div class="category-chip" data-color="musculosas">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #ff9a9e, #fad0c4);"></span>
-                                    <span class="chip-label">Musculosas</span>
-                                </div>
-                                <div class="category-chip" data-color="pantalones">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #56CCF2, #2F80ED);"></span>
-                                    <span class="chip-label">Pantalones</span>
-                                </div>
-                                <div class="category-chip" data-color="palazos">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #4facfe, #00f2fe);"></span>
-                                    <span class="chip-label">Palazos</span>
-                                </div>
-                                <div class="category-chip" data-color="monos">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #667eea, #764ba2);"></span>
-                                    <span class="chip-label">Monos</span>
-                                </div>
-                                <div class="category-chip" data-color="shorts">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #f093fb, #f5576c);"></span>
-                                    <span class="chip-label">Shorts</span>
-                                </div>
-                                <div class="category-chip" data-color="polleras">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #ff0844, #ffb199);"></span>
-                                    <span class="chip-label">Polleras</span>
-                                </div>
-                                <div class="category-chip" data-color="calzas">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #ff758c, #ff7eb3);"></span>
-                                    <span class="chip-label">Calzas</span>
-                                </div>
-                                <div class="category-chip" data-color="catsuit">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #4158d0, #c850c0);"></span>
-                                    <span class="chip-label">Catsuit</span>
-                                </div>
-                                <div class="category-chip" data-color="vestidos">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #6a11cb, #2575fc);"></span>
-                                    <span class="chip-label">Vestidos</span>
-                                </div>
-                                <div class="category-chip" data-color="abrigos">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #30cfd0, #330867);"></span>
-                                    <span class="chip-label">Abrigos</span>
-                                </div>
-                                <div class="category-chip" data-color="sudaderas">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #434343, #000000);"></span>
-                                    <span class="chip-label">Sudaderas</span>
-                                </div>
-                                <div class="category-chip" data-color="conjuntos">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #309108, #fdcbf1);"></span>
-                                    <span class="chip-label">Conjuntos</span>
-                                </div>
-                                <div class="category-chip" data-color="medias">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #ff9a9e, #fecfef);"></span>
-                                    <span class="chip-label">Medias</span>
-                                </div>
-                                <div class="category-chip" data-color="accesorios">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #43e97b, #38f9d7);"></span>
-                                    <span class="chip-label">Accesorios</span>
-                                </div>
-                                <div class="category-chip" data-color="calzado">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #a18cd1, #fbc2eb);"></span>
-                                    <span class="chip-label">Calzado</span>
-                                </div>
-                                <div class="category-chip" data-color="otros">
-                                    <span class="chip-color"
-                                        style="background: linear-gradient(to right, #f6d365, #fda085);"></span>
-                                    <span class="chip-label">Otros</span>
-                                </div>
-                            </div>
-                            <input type="hidden" id="itemCategoria" value="remeras">
+                        <div class="category-chip" data-color="musculosas">
+                            <span class="chip-color" style="background: linear-gradient(to right, #ff9a9e, #fad0c4);"></span>
+                            <span class="chip-label">Musculosas</span>
+                        </div>
+                        <div class="category-chip" data-color="pantalones">
+                            <span class="chip-color" style="background: linear-gradient(to right, #56CCF2, #2F80ED);"></span>
+                            <span class="chip-label">Pantalones</span>
+                        </div>
+                        <div class="category-chip" data-color="palazos">
+                            <span class="chip-color" style="background: linear-gradient(to right, #4facfe, #00f2fe);"></span>
+                            <span class="chip-label">Palazos</span>
+                        </div>
+                        <div class="category-chip" data-color="monos">
+                            <span class="chip-color" style="background: linear-gradient(to right, #667eea, #764ba2);"></span>
+                            <span class="chip-label">Monos</span>
+                        </div>
+                        <div class="category-chip" data-color="shorts">
+                            <span class="chip-color" style="background: linear-gradient(to right, #f093fb, #f5576c);"></span>
+                            <span class="chip-label">Shorts</span>
+                        </div>
+                        <div class="category-chip" data-color="polleras">
+                            <span class="chip-color" style="background: linear-gradient(to right, #ff0844, #ffb199);"></span>
+                            <span class="chip-label">Polleras</span>
+                        </div>
+                        <div class="category-chip" data-color="calzas">
+                            <span class="chip-color" style="background: linear-gradient(to right, #ff758c, #ff7eb3);"></span>
+                            <span class="chip-label">Calzas</span>
+                        </div>
+                        <div class="category-chip" data-color="catsuit">
+                            <span class="chip-color" style="background: linear-gradient(to right, #4158d0, #c850c0);"></span>
+                            <span class="chip-label">Catsuit</span>
+                        </div>
+                        <div class="category-chip" data-color="vestidos">
+                            <span class="chip-color" style="background: linear-gradient(to right, #6a11cb, #2575fc);"></span>
+                            <span class="chip-label">Vestidos</span>
+                        </div>
+                        <div class="category-chip" data-color="abrigos">
+                            <span class="chip-color" style="background: linear-gradient(to right, #30cfd0, #330867);"></span>
+                            <span class="chip-label">Abrigos</span>
+                        </div>
+                        <div class="category-chip" data-color="sudaderas">
+                            <span class="chip-color" style="background: linear-gradient(to right, #434343, #000000);"></span>
+                            <span class="chip-label">Sudaderas</span>
+                        </div>
+                        <div class="category-chip" data-color="conjuntos">
+                            <span class="chip-color" style="background: linear-gradient(to right, #309108, #fdcbf1);"></span>
+                            <span class="chip-label">Conjuntos</span>
+                        </div>
+                        <div class="category-chip" data-color="medias">
+                            <span class="chip-color" style="background: linear-gradient(to right, #ff9a9e, #fecfef);"></span>
+                            <span class="chip-label">Medias</span>
+                        </div>
+                        <div class="category-chip" data-color="accesorios">
+                            <span class="chip-color" style="background: linear-gradient(to right, #e63946, #b91d47);"></span>
+                            <span class="chip-label">Accesorios</span>
+                        </div>
+                        <div class="category-chip" data-color="calzado">
+                            <span class="chip-color" style="background: linear-gradient(to right, #a18cd1, #fbc2eb);"></span>
+                            <span class="chip-label">Calzado</span>
+                        </div>
+                        <div class="category-chip" data-color="otros">
+                            <span class="chip-color" style="background: linear-gradient(to right, #f6d365, #fda085);"></span>
+                            <span class="chip-label">Otros</span>
                         </div>
                     </div>
-
-                    <!-- Right Column: Sizes -->
-                    <div
-                        style="flex: 1; min-width: 350px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05);">
-                        <label
-                            style="display: block; margin-bottom: 20px; font-weight: 700; color: #43e97b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Control
-                            de Stock por Talle:</label>
-                        <div class="size-stock-grid" style="grid-template-columns: repeat(2, 1fr); gap: 15px;">
-                            <!-- XS (36) -->
-                            <div class="size-input-group">
-                                <label style="font-size: 11px; color: #94a3b8;">XS (36)</label>
-                                <div class="stepper">
-                                    <button type="button" class="btn-step minus" data-size="XS">−</button>
-                                    <input type="number" data-size="XS" class="size-stock-input" value="0" min="0">
-                                    <button type="button" class="btn-step plus" data-size="XS">+</button>
-                                </div>
-                            </div>
-                            <!-- S (38) -->
-                            <div class="size-input-group">
-                                <label style="font-size: 11px; color: #94a3b8;">S (38)</label>
-                                <div class="stepper">
-                                    <button type="button" class="btn-step minus" data-size="S">−</button>
-                                    <input type="number" data-size="S" class="size-stock-input" value="0" min="0">
-                                    <button type="button" class="btn-step plus" data-size="S">+</button>
-                                </div>
-                            </div>
-                            <!-- M (40) -->
-                            <div class="size-input-group">
-                                <label style="font-size: 11px; color: #94a3b8;">M (40)</label>
-                                <div class="stepper">
-                                    <button type="button" class="btn-step minus" data-size="M">−</button>
-                                    <input type="number" data-size="M" class="size-stock-input" value="0" min="0">
-                                    <button type="button" class="btn-step plus" data-size="M">+</button>
-                                </div>
-                            </div>
-                            <!-- L (42) -->
-                            <div class="size-input-group">
-                                <label style="font-size: 11px; color: #94a3b8;">L (42)</label>
-                                <div class="stepper">
-                                    <button type="button" class="btn-step minus" data-size="L">−</button>
-                                    <input type="number" data-size="L" class="size-stock-input" value="0" min="0">
-                                    <button type="button" class="btn-step plus" data-size="L">+</button>
-                                </div>
-                            </div>
-                            <!-- XL (44) -->
-                            <div class="size-input-group">
-                                <label style="font-size: 11px; color: #94a3b8;">XL (44)</label>
-                                <div class="stepper">
-                                    <button type="button" class="btn-step minus" data-size="XL">−</button>
-                                    <input type="number" data-size="XL" class="size-stock-input" value="0" min="0">
-                                    <button type="button" class="btn-step plus" data-size="XL">+</button>
-                                </div>
-                            </div>
-                            <!-- XXL (46) -->
-                            <div class="size-input-group">
-                                <label style="font-size: 11px; color: #94a3b8;">XXL (46)</label>
-                                <div class="stepper">
-                                    <button type="button" class="btn-step minus" data-size="XXL">−</button>
-                                    <input type="number" data-size="XXL" class="size-stock-input" value="0" min="0">
-                                    <button type="button" class="btn-step plus" data-size="XXL">+</button>
-                                </div>
-                            </div>
-                            <!-- Única -->
-                            <div class="size-input-group"
-                                style="grid-column: span 2; margin-top: 10px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-                                <label style="font-size: 12px; color: #43e97b; font-weight: 600;">Talla Única</label>
-                                <div class="stepper" style="margin-top: 5px;">
-                                    <button type="button" class="btn-step minus" data-size="Única">−</button>
-                                    <input type="number" data-size="Única" class="size-stock-input" value="0" min="0">
-                                    <button type="button" class="btn-step plus" data-size="Única">+</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <input type="hidden" id="itemCategoria" value="remeras">
                 </div>
             </div>
 
@@ -656,7 +668,17 @@
     <div id="saleModal" class="modal">
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
-                <h2>📦 Registrar Venta</h2>
+                <h2 style="display: flex; align-items: center; margin: 0;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e63946" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px;">
+                        <path d="m7.5 4.27 9 5.15" />
+                        <path
+                            d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                        <path d="m3.3 7 8.7 5 8.7-5" />
+                        <path d="M12 22V12" />
+                    </svg>
+                    Registrar Venta
+                </h2>
                 <span class="modal-close" id="closeSaleModal">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -682,6 +704,12 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="saleColor">Seleccionar Color:</label>
+                    <select id="saleColor" class="input-hours">
+                        <!-- Opciones inyectadas por JS -->
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="saleTalla">Seleccionar Talla:</label>
                     <select id="saleTalla" class="input-hours">
                         <!-- Opciones inyectadas por JS -->
@@ -704,7 +732,15 @@
     <div id="capitalModal" class="modal">
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
-                <h2>💰 Editar Capital</h2>
+                <h2 style="display: flex; align-items: center; margin: 0;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgb(33 107 58)" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px;">
+                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                    </svg>
+                    Editar Capital
+                </h2>
                 <span class="modal-close" id="closeCapitalModal">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">

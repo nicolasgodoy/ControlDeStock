@@ -88,17 +88,20 @@ class UIController {
         this.currentSalesPage = 1;
         this.salesPerPage = 10;
         this.activeTab = 'inventory';
-        this.sizeStockInputs = document.querySelectorAll('.size-stock-input');
 
-        // New Elements
+        // Month Filters
         this.inventoryMonthFilter = document.getElementById('inventoryMonthFilter');
         this.setInitialMonth();
 
-        // Image Upload Elements
-        this.productImagesGrid = document.getElementById('productImagesGrid');
-        this.btnUploadImage = document.getElementById('btnUploadImage');
-        this.fileInput = document.getElementById('fileInput');
-        this.currentProductImages = [];
+        // Color filter
+        this.filterColor = document.getElementById('filterColor');
+
+        // Color Variants (new multi-color system)
+        this.colorVariants = []; // [{ color, image, stockPorTalla }]
+        this.colorVariantsContainer = document.getElementById('colorVariantsContainer');
+        this.btnAddColorVariant = document.getElementById('btnAddColorVariant');
+        this.variantFileInput = document.getElementById('variantFileInput');
+        this._uploadingVariantIdx = null;
 
         // View Toggles
         this.btnGridView = document.getElementById('btnGridView');
@@ -154,6 +157,9 @@ class UIController {
         // Search & Filter
         this.searchInput.addEventListener('input', () => this.filterInventory());
         this.filterCategory.addEventListener('change', () => this.filterInventory());
+        if (this.filterColor) {
+            this.filterColor.addEventListener('change', () => this.filterInventory());
+        }
         if (this.inventoryMonthFilter) {
             this.inventoryMonthFilter.addEventListener('change', () => {
                 // Sync with other filters
@@ -252,23 +258,33 @@ class UIController {
         if (this.btnCancelCapital) this.btnCancelCapital.addEventListener('click', () => this.closeCapitalModal());
         if (this.btnSaveCapital) this.btnSaveCapital.addEventListener('click', () => this.saveCapital());
 
-        // Stepper logic para tallas
-        document.querySelectorAll('.btn-step').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const size = btn.dataset.size;
-                const input = document.querySelector(`.size-stock-input[data-size="${size}"]`);
-                if (!input) return;
-
-                let val = parseInt(input.value) || 0;
-                if (btn.classList.contains('plus')) {
-                    val++;
-                } else if (btn.classList.contains('minus')) {
-                    val = Math.max(0, val - 1);
-                }
-                input.value = val;
-            });
+        // Stepper logic para tallas (delegado: funciona para variantes dinámicas)
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-step');
+            if (!btn || !this.itemModal || this.itemModal.style.display === 'none') return;
+            e.preventDefault();
+            const size = btn.dataset.size;
+            const variantIdx = btn.dataset.variant;
+            const selector = variantIdx !== undefined
+                ? `.size-stock-input[data-size="${size}"][data-variant="${variantIdx}"]`
+                : `.size-stock-input[data-size="${size}"]`;
+            const input = document.querySelector(selector);
+            if (!input) return;
+            let val = parseInt(input.value) || 0;
+            if (btn.classList.contains('plus')) val++;
+            else if (btn.classList.contains('minus')) val = Math.max(0, val - 1);
+            input.value = val;
         });
+
+        // Agregar variante de color
+        if (this.btnAddColorVariant) {
+            this.btnAddColorVariant.addEventListener('click', () => this.addColorVariant());
+        }
+
+        // Imagen por variante
+        if (this.variantFileInput) {
+            this.variantFileInput.addEventListener('change', (e) => this.handleVariantImageUpload(e));
+        }
 
         this.btnConfirmCancel.addEventListener('click', () => this.closeConfirm());
 
@@ -296,13 +312,7 @@ class UIController {
             });
         });
 
-        // Image Upload Listeners
-        if (this.btnUploadImage) {
-            this.btnUploadImage.addEventListener('click', () => this.fileInput.click());
-        }
-        if (this.fileInput) {
-            this.fileInput.addEventListener('change', (e) => this.handleImageUpload(e));
-        }
+        // (Image upload is now handled per color variant via variantFileInput)
 
         // Data Sync
         dataManager.onDataSync((data) => {
@@ -587,36 +597,48 @@ class UIController {
     }
 
     async quickSell(id) {
-        // Asegurar que el ID sea string y buscar el item
         const itemId = String(id);
         const item = dataManager.dataCache.inventory.find(i => String(i.id) === itemId);
-        if (!item) {
-            console.error("Item no encontrado para venta:", itemId);
-            return;
-        }
+        if (!item) { console.error('Item no encontrado:', itemId); return; }
 
-        // Reset and Clear Modal
         this.saleQuantityInput.value = 1;
-        this.saleCustomerInput.value = "";
-        this.saleStatusInput.value = "pagado";
+        this.saleCustomerInput.value = '';
+        this.saleStatusInput.value = 'pagado';
         document.getElementById('saleError').style.display = 'none';
 
-        // Poblara tallas disponibles
+        const saleColorSelect = document.getElementById('saleColor');
         const saleTallaSelect = document.getElementById('saleTalla');
-        if (item.stockPorTalla && Object.keys(item.stockPorTalla).length > 0) {
-            saleTallaSelect.innerHTML = Object.keys(item.stockPorTalla)
-                .filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0)
-                .map(t => `<option value="${t}">${t}${dataManager.dataCache.tallaMapping[t] !== t ? ' (' + dataManager.dataCache.tallaMapping[t] + ')' : ''} - Stock: ${item.stockPorTalla[t]}</option>`)
-                .join('');
-        } else {
-            // Fallback para items viejos o sin desglose
-            saleTallaSelect.innerHTML = `<option value="${item.talla}">${item.talla}</option>`;
-        }
+
+        // Normalizar variantes
+        const colores = (item.colores && Array.isArray(item.colores))
+            ? item.colores.filter(v => v.cantidad > 0)
+            : [{ color: item.color || 'Sin color', stockPorTalla: item.stockPorTalla || {}, cantidad: item.cantidad || 0 }];
+
+        // Poblar colores
+        saleColorSelect.innerHTML = colores.map(v =>
+            `<option value="${v.color}">${v.color} (Stock: ${v.cantidad})</option>`
+        ).join('');
+
+        // Actualizar tallas al cambiar color
+        const updateTallas = () => {
+            const selectedColor = saleColorSelect.value;
+            const variante = colores.find(v => v.color === selectedColor);
+            if (variante && variante.stockPorTalla) {
+                saleTallaSelect.innerHTML = Object.entries(variante.stockPorTalla)
+                    .filter(([, qty]) => (parseInt(qty) || 0) > 0)
+                    .map(([t, qty]) => `<option value="${t}">${t} - Stock: ${qty}</option>`)
+                    .join('');
+            } else {
+                saleTallaSelect.innerHTML = '<option value="">Sin stock</option>';
+            }
+        };
+        saleColorSelect.onchange = updateTallas;
+        updateTallas();
 
         this.saleItemInfo.innerHTML = `
-            <div style="font-weight: bold; font-size: 16px;">${item.tipo}</div>
-            <div style="font-size: 13px; color: #bbc0ff; margin-top: 5px;">Color: ${item.color}</div>
-            <div style="font-size: 13px; color: #20e2d7; margin-top: 3px;">Stock total: ${item.cantidad}</div>
+            <div style="font-weight:bold;font-size:16px;">${item.tipo}</div>
+            <div style="font-size:13px;color:#bbc0ff;margin-top:5px;">Colores disponibles: ${colores.map(v => v.color).join(', ')}</div>
+            <div style="font-size:13px;color:#20e2d7;margin-top:3px;">Stock total: ${item.cantidad}</div>
         `;
 
         this.closeAllModals();
@@ -624,10 +646,8 @@ class UIController {
         this.saleModal.style.zIndex = '1010';
         this.saleQuantityInput.focus();
 
-        // Limpiar y re-vincular botón de confirmación
         const confirmBtn = document.getElementById('btnConfirmSale');
         if (!confirmBtn) return;
-
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
         this.btnConfirmSale = newConfirmBtn;
@@ -636,30 +656,26 @@ class UIController {
             const qty = parseInt(this.saleQuantityInput.value);
             const cliente = this.saleCustomerInput.value.trim();
             const estado = this.saleStatusInput.value;
-            const talla = saleTallaSelect.value;
+            const colorSel = saleColorSelect.value;
+            const tallaSel = saleTallaSelect.value;
             const errorDiv = document.getElementById('saleError');
 
             if (isNaN(qty) || qty <= 0) {
-                errorDiv.textContent = "Cantidad no válida";
-                errorDiv.style.display = 'block';
-                return;
+                errorDiv.textContent = 'Cantidad no válida'; errorDiv.style.display = 'block'; return;
             }
 
-            // Verificar stock de la talla seleccionada
-            const stockTalla = item.stockPorTalla ? (parseInt(item.stockPorTalla[talla]) || 0) : item.cantidad;
-            if (qty > stockTalla) {
-                errorDiv.textContent = "No hay suficiente stock en esta talla";
-                errorDiv.style.display = 'block';
-                return;
+            const variante = colores.find(v => v.color === colorSel);
+            const stockDisp = variante?.stockPorTalla?.[tallaSel] || variante?.cantidad || 0;
+            if (qty > stockDisp) {
+                errorDiv.textContent = 'No hay suficiente stock para esa talla/color'; errorDiv.style.display = 'block'; return;
             }
 
-            const result = await dataManager.registerSale(id, qty, cliente, estado, talla);
+            const result = await dataManager.registerSale(id, qty, cliente, estado, tallaSel, colorSel);
             if (result.success) {
-                this.showNotification(`Venta registrada: ${qty} x ${item.tipo} (${talla})`);
+                this.showNotification(`Venta registrada: ${qty} x ${item.tipo} (${colorSel} - ${tallaSel})`);
                 this.closeSaleModal();
             } else {
-                errorDiv.textContent = "Error: " + result.message;
-                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'Error: ' + result.message; errorDiv.style.display = 'block';
             }
         });
     }
@@ -757,44 +773,28 @@ class UIController {
     renderInventory(inventoryList = null) {
         const baseData = inventoryList || dataManager.dataCache.inventory;
 
-        // Obtener filtros actuales de la UI
         const searchTerm = this.searchInput?.value.toLowerCase() || '';
         const category = this.filterCategory?.value || '';
         const monthFilter = this.inventoryMonthFilter?.value || '';
+        const colorFilter = this.filterColor?.value || '';
 
-        let filtered = [...baseData];
+        // Filtramos sobre la base original (sin aplanar)
+        let filtered = baseData.filter(item => {
+            const matchesSearch = item.tipo.toLowerCase().includes(searchTerm) || 
+                                 (item.colores || []).some(v => v.color.toLowerCase().includes(searchTerm));
+            const matchesCategory = !category || this.getDisplayCategory(item) === category;
+            const matchesMonth = !monthFilter || (item.fechaCreacion || '').startsWith(monthFilter);
+            const matchesColor = !colorFilter || (item.colores || []).some(v => v.color === colorFilter);
+            
+            return matchesSearch && matchesCategory && matchesMonth && matchesColor;
+        });
 
-        // Aplicar búsqueda
-        if (searchTerm) {
-            filtered = filtered.filter(item =>
-                item.tipo.toLowerCase().includes(searchTerm) ||
-                item.color.toLowerCase().includes(searchTerm) ||
-                (item.talla && item.talla.toLowerCase().includes(searchTerm))
-            );
-        }
-
-        // Aplicar categoría
-        if (category) {
-            filtered = filtered.filter(item => this.getDisplayCategory(item) === category);
-        }
-
-        // Aplicar filtro de mes/lote
-        if (monthFilter) {
-            filtered = filtered.filter(item => {
-                const itemDate = item.fechaCreacion || item.fecha || '';
-                return itemDate.startsWith(monthFilter);
-            });
-        }
+        this.populateColorFilter();
 
         const totalItems = filtered.length;
         const totalPages = Math.ceil(totalItems / this.inventoryPerPage);
-        
-        // Ajustar página actual si es necesario
-        if (this.currentInventoryPage > totalPages && totalPages > 0) {
-            this.currentInventoryPage = totalPages;
-        }
+        if (this.currentInventoryPage > totalPages && totalPages > 0) this.currentInventoryPage = totalPages;
 
-        // Paginación
         const start = (this.currentInventoryPage - 1) * this.inventoryPerPage;
         const pagedItems = filtered.slice(start, start + this.inventoryPerPage);
 
@@ -806,7 +806,7 @@ class UIController {
         }
 
         this.renderInventoryPagination(totalItems);
-        this.updateMonthlyStats(filtered);
+        this.updateMonthlyStats(flat);
     }
 
     renderInventoryPagination(totalItems) {
@@ -906,15 +906,13 @@ class UIController {
     }
 
     createItemRow(item) {
-        const displayCategory = this.getDisplayCategory(item);
+        const displayCategory = item._displayCategory || this.getDisplayCategory(item);
         const categoryLabel = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
         const stockColor = this.getStockColor(item.cantidad);
-        const hasImages = item.images && item.images.length > 0;
-        const mainImage = hasImages ? item.images[0] : null;
 
-        const imgHtml = mainImage 
-            ? `<img src="${mainImage}" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover; object-position: top; margin-right: 12px; border: 1px solid rgba(255,255,255,0.1);" loading="lazy">`
-            : `<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.05); margin-right: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.02);"><svg width="18" height="18" opacity="0.2" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+        const imgHtml = item.image
+            ? `<img src="${item.image}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;object-position:top;margin-right:12px;border:1px solid rgba(255,255,255,0.1);" loading="lazy">`
+            : `<div style="width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,0.05);margin-right:12px;display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" opacity="0.2" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
 
         return `
             <tr>
@@ -952,67 +950,117 @@ class UIController {
         this.updateStats();
     }
 
+    getColorHex(colorName) {
+        if (!colorName) return '#333';
+        const name = colorName.toLowerCase().trim();
+        const colors = {
+            'negro': '#000000',
+            'black': '#000000',
+            'blanco': '#ffffff',
+            'white': '#ffffff',
+            'rojo': '#ff4d4d',
+            'red': '#ff4d4d',
+            'azul': '#4d94ff',
+            'blue': '#4d94ff',
+            'verde': '#4dff88',
+            'green': '#4dff88',
+            'amarillo': '#ffff4d',
+            'yellow': '#ffff4d',
+            'rosa': '#ff4da6',
+            'pink': '#ff4da6',
+            'naranja': '#ff944d',
+            'orange': '#ff944d',
+            'gris': '#808080',
+            'gray': '#808080',
+            'violeta': '#b366ff',
+            'purple': '#b366ff',
+            'marron': '#8b4513',
+            'brown': '#8b4513',
+            'beige': '#f5f5dc',
+            'celeste': '#87ceeb',
+            'fucsia': '#ff00ff',
+            'crema': '#fffdd0',
+            'bordo': '#800000',
+            'lila': '#c8a2c8',
+            'esmeralda': '#50c878',
+            'turquesa': '#40e0d0',
+            'mostaza': '#e1ad01',
+            'marfil': '#fffff0'
+        };
+        return colors[name] || '#444'; // Gris oscuro si no lo encuentra
+    }
+
     createItemCard(item) {
         const displayCategory = this.getDisplayCategory(item);
         const categoryLabel = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
-        const hasImages = item.images && item.images.length > 0;
         const precioFormatted = (item.precio || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 });
 
-        let imagesHtml = '';
-        if (!hasImages) {
-            imagesHtml = `<div class="no-image-placeholder">
-                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                               <polyline points="21 15 16 10 5 21"></polyline>
-                             </svg>
-                           </div>`;
-        } else if (item.images.length === 1) {
-            imagesHtml = `<img src="${item.images[0]}" alt="${item.tipo}" class="img-fit" loading="lazy">`;
-        } else {
-            const total = item.images.length;
-            imagesHtml = item.images.map((img, idx) => 
-                `<img src="${img}" alt="${item.tipo}" class="img-fit carousel-${total}-imgs" style="animation-delay: -${(total - idx) * 3}s" loading="lazy">`
-            ).join('');
-        }
+        const variantes = (item.colores && item.colores.length > 0) 
+            ? item.colores 
+            : [{ color: item.color || 'Único', image: (item.images && item.images[0]) || null, stockPorTalla: item.stockPorTalla || {}, cantidad: item.cantidad || 0 }];
+
+        const firstVar = variantes[0];
+        const cardId = `card-${item.id}`;
+
+        // Círculos de colores con detección inteligente
+        const colorCirclesHtml = variantes.length > 1 ? `
+            <div class="color-selectors" style="display: flex; gap: 6px; margin-top: 8px;">
+                ${variantes.map((v, idx) => {
+                    const hex = this.getColorHex(v.color);
+                    const isActive = idx === 0;
+                    return `
+                    <div class="color-circle" 
+                         style="width: 14px; height: 14px; border-radius: 50%; border: ${isActive ? '2px solid #e63946' : '1px solid rgba(0,0,0,0.2)'}; background: ${hex}; cursor: pointer; position: relative; transition: all 0.2s; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.1); transform: ${isActive ? 'scale(1.2)' : 'scale(1)'};"
+                         title="${v.color}"
+                         onclick="window.uiController.switchCardColor('${cardId}', ${JSON.stringify(v).replace(/"/g, '&quot;')}, this)">
+                    </div>`;
+                }).join('')}
+            </div>
+        ` : '';
+
+        const imagesHtml = firstVar.image
+            ? `<img src="${firstVar.image}" id="${cardId}-img" alt="${item.tipo}" class="img-fit" loading="lazy">`
+            : `<div id="${cardId}-img-placeholder" class="no-image-placeholder"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
 
         return `
-            <div class="card">
+            <div class="card" id="${cardId}">
                 <div class="card-image-container" style="height: 180px; position: relative; width: 100%; overflow: hidden;">
                     ${imagesHtml}
                     <div class="category-pill-overlay banner-${displayCategory}">${categoryLabel}</div>
                 </div>
-                <div class="card-content" style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
+                <div class="card-content" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div style="flex: 1;">
-                            <div class="card-title" style="font-size: 16px; margin: 0; line-height: 1.2;">${item.tipo}</div>
-                            <div class="card-subtitle" style="font-size: 12px; opacity: 0.6; margin-top: 2px;">${item.color}</div>
+                            <div class="card-title" style="font-size: 15px; margin: 0; line-height: 1.2; font-weight: 700;">${item.tipo}</div>
+                            <div id="${cardId}-color-label" class="card-subtitle" style="font-size: 11px; opacity: 0.6; margin-top: 2px;">${firstVar.color}</div>
+                            ${colorCirclesHtml}
                         </div>
                         <div style="text-align: right; margin-left: 10px;">
-                            <div class="stock-price" style="font-size: 18px; margin: 0; color: #e63946;">$${precioFormatted}</div>
+                            <div class="stock-price" style="font-size: 17px; margin: 0; color: #e63946; font-weight: 800;">$${precioFormatted}</div>
                         </div>
                     </div>
                     
-                    <div class="stock-info-row" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
-                         <div style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1;">
-                            ${item.stockPorTalla ? Object.keys(item.stockPorTalla)
-                .filter(t => (parseInt(item.stockPorTalla[t]) || 0) > 0)
-                .map(t => `<span class="size-pill" style="font-size: 10px; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">${t}</span>`)
-                .join('') : `<span class="size-pill" style="font-size: 10px; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">${item.talla}</span>`
-            }
+                    <div class="stock-info-row" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                         <div id="${cardId}-sizes" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1;">
+                            ${Object.keys(firstVar.stockPorTalla || {})
+                                .filter(t => (parseInt(firstVar.stockPorTalla[t]) || 0) > 0)
+                                .map(t => `<span class="size-pill" style="font-size: 9px; background: rgba(255,255,255,0.05); padding: 2px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">${t}</span>`)
+                                .join('') || '<span style="font-size: 9px; opacity:0.4;">Sin stock</span>'
+                            }
                         </div>
                         <div style="text-align: right; border-left: 1px solid rgba(255,255,255,0.05); padding-left: 10px;">
-                            <div style="font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Stock</div>
-                            <div style="font-size: 22px; font-weight: 800; color: ${this.getStockColor(item.cantidad)}; line-height: 1;">${item.cantidad}</div>
+                            <div style="font-size: 8px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Stock</div>
+                            <div id="${cardId}-stock-total" style="font-size: 20px; font-weight: 800; color: ${this.getStockColor(firstVar.cantidad)}; line-height: 1;">${firstVar.cantidad}</div>
                         </div>
                     </div>
 
-                    <div class="card-actions" style="margin-top: auto; display: flex; gap: 8px;">
+                    <div class="card-actions" style="margin-top: 5px; display: flex; gap: 8px;">
                         <button class="btn-sell-quick" data-sell-id="${item.id}" style="flex: 1; padding: 10px 0; border-radius: 8px; font-weight: 700; font-size: 13px; border: none; cursor: pointer;">Vender</button>
                         <div style="display: flex; gap: 4px; flex-shrink: 0;">
-                            <button class="btn-edit" data-edit-id="${item.id}" style="width: 38px; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; cursor: pointer;">
+                            <button class="btn-edit" data-edit-id="${item.id}" style="width: 36px; height: 36px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             </button>
-                            <button class="btn-delete" data-delete-id="${item.id}" style="width: 38px; height: 38px; background: rgba(255, 51, 102, 0.05); border: 1px solid rgba(255, 51, 102, 0.1); padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #ff3366; cursor: pointer; flex-shrink: 0;">
+                            <button class="btn-delete" data-delete-id="${item.id}" style="width: 36px; height: 36px; background: rgba(255, 51, 102, 0.05); border: 1px solid rgba(255, 51, 102, 0.1); border-radius: 8px; color: #ff3366; cursor: pointer;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                             </button>
                         </div>
@@ -1022,12 +1070,9 @@ class UIController {
         `;
     }
 
-    // Eliminamos el bloque anterior de filterInventory ya que ahora está arriba
-
-    updateMonthlyStats(filteredItems) {
-        const itemsCount = filteredItems.length;
-        const stockSum = filteredItems.reduce((acc, item) => acc + (parseInt(item.cantidad) || 0), 0);
-
+    updateMonthlyStats(filteredFlat) {
+        const itemsCount = filteredFlat.length;
+        const stockSum = filteredFlat.reduce((acc, item) => acc + (parseInt(item.cantidad) || 0), 0);
         if (this.totalItemsMonth) this.totalItemsMonth.textContent = itemsCount;
         if (this.totalStockMonth) this.totalStockMonth.textContent = stockSum;
     }
@@ -1058,77 +1103,170 @@ class UIController {
         return item.categoria || 'remeras';
     }
 
-    // --- IMAGE HANDLING ---
+    // --- GESTIÓN DE VARIANTES (MODAL TABS) ---
 
-    async handleImageUpload(e) {
-        let files = Array.from(e.target.files);
-        if (files.length === 0) return;
-
-        const maxAvailable = 3 - this.currentProductImages.length;
-        if (maxAvailable <= 0) {
-            alert('Ya has alcanzado el máximo de 3 fotos');
+    addColorVariant() {
+        if (this.colorVariants.length >= 3) {
+            this.showNotification('Máximo 3 colores por producto');
             return;
         }
+        // Guardamos el stock del color actual antes de crear uno nuevo
+        this.saveCurrentTabStock();
+        
+        this.colorVariants.push({ color: 'Nuevo Color', image: null, stockPorTalla: {} });
+        this.activeColorIdx = this.colorVariants.length - 1;
+        this.renderColorTabs();
+        this.loadActiveTabStock();
+    }
 
-        if (files.length > maxAvailable) {
-            alert(`Solo puedes subir ${maxAvailable} foto(s) más. Se seleccionarán las primeras ${maxAvailable}.`);
-            files = files.slice(0, maxAvailable);
+    saveCurrentTabStock() {
+        if (this.activeColorIdx === null || !this.colorVariants[this.activeColorIdx]) return;
+        
+        const spt = {};
+        const inputs = document.querySelectorAll('.size-stock-input');
+        inputs.forEach(input => {
+            const val = parseInt(input.value) || 0;
+            if (val > 0) spt[input.dataset.size] = val;
+        });
+        
+        this.colorVariants[this.activeColorIdx].stockPorTalla = spt;
+        this.colorVariants[this.activeColorIdx].color = document.getElementById('activeColorName').value.trim();
+    }
+
+    loadActiveTabStock() {
+        const variant = this.colorVariants[this.activeColorIdx];
+        if (!variant) return;
+
+        document.getElementById('activeColorName').value = variant.color || '';
+        document.getElementById('activeColorStockLabel').textContent = `(${variant.color || 'Sin nombre'})`;
+        
+        // Cargar imagen preview
+        const preview = document.getElementById('activeColorImgPreview');
+        if (variant.image) {
+            preview.innerHTML = `<img src="${variant.image}" style="width:100%;height:100%;object-fit:cover;">`;
+        } else {
+            preview.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e63946" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span style="font-size: 9px; color: #94a3b8; margin-top: 4px;">Foto</span>`;
         }
 
-        // Disable upload button while uploading
-        this.btnUploadImage.classList.add('disabled');
-        const uploadLabel = this.btnUploadImage.querySelector('span');
-        const originalText = uploadLabel ? uploadLabel.textContent : 'Añadir Foto';
-        if (uploadLabel) uploadLabel.textContent = 'Subiendo...';
+        const inputs = document.querySelectorAll('.size-stock-input');
+        inputs.forEach(input => {
+            input.value = variant.stockPorTalla[input.dataset.size] || 0;
+        });
+    }
+
+    switchActiveColorTab(idx) {
+        this.saveCurrentTabStock();
+        this.activeColorIdx = idx;
+        this.renderColorTabs();
+        this.loadActiveTabStock();
+    }
+
+    renderColorTabs() {
+        const container = document.getElementById('colorTabsRow');
+        if (!container) return;
+
+        container.innerHTML = this.colorVariants.map((v, idx) => `
+            <div onclick="window.uiController.switchActiveColorTab(${idx})" 
+                 style="padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; border: 1px solid ${this.activeColorIdx === idx ? '#e63946' : 'rgba(255,255,255,0.1)'}; background: ${this.activeColorIdx === idx ? 'rgba(230,57,70,0.1)' : 'transparent'}; color: ${this.activeColorIdx === idx ? '#e63946' : '#94a3b8'}; transition: all 0.2s;">
+                ${v.color || `Color ${idx + 1}`}
+            </div>
+        `).join('');
+
+        const btnAdd = document.getElementById('btnAddColorVariant');
+        if (btnAdd) btnAdd.style.display = this.colorVariants.length >= 3 ? 'none' : 'block';
+    }
+
+    triggerActiveVariantUpload() {
+        if (this.activeColorIdx === null) return;
+        this.variantFileInput.click();
+    }
+
+    async handleVariantImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file || this.activeColorIdx === null) return;
 
         try {
-            for (const file of files) {
-                const imageUrl = await dataManager.uploadImage(file);
-                this.currentProductImages.push(imageUrl);
-            }
-            this.renderImagePreviews();
-        } catch (error) {
-            alert('Error al subir imagen: ' + error.message);
+            this.showNotification('Subiendo foto...');
+            const url = await dataManager.uploadImage(file);
+            this.colorVariants[this.activeColorIdx].image = url;
+            this.loadActiveTabStock();
+        } catch (err) {
+            alert('Error: ' + err.message);
         } finally {
-            this.btnUploadImage.classList.remove('disabled');
-            if (uploadLabel) uploadLabel.textContent = originalText;
-            this.fileInput.value = ''; // Reset input
+            this.variantFileInput.value = '';
         }
     }
 
-    renderImagePreviews() {
-        if (!this.productImagesGrid) return;
-        this.productImagesGrid.innerHTML = '';
+    // --- INTERACTIVIDAD DE CARDS ---
 
-        this.currentProductImages.forEach((url, index) => {
-            const container = document.createElement('div');
-            container.className = 'image-preview-container';
-            container.style.width = '80px';
-            container.style.height = '80px';
-            container.innerHTML = `
-                <img src="${url}" alt="Preview ${index + 1}">
-                <button type="button" class="btn-remove-image" data-index="${index}">×</button>
+    switchCardColor(cardId, variant, circleEl) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+
+        // Actualizar contenedor de imagen (maneja cambio entre img y placeholder)
+        const imgContainer = card.querySelector('.card-image-container');
+        const categoryLabel = card.querySelector('.category-pill-overlay')?.textContent || '';
+        const displayCategory = Array.from(card.querySelector('.category-pill-overlay')?.classList || []).find(c => c.startsWith('banner-'))?.replace('banner-', '') || 'remeras';
+
+        if (variant.image) {
+            imgContainer.innerHTML = `
+                <img src="${variant.image}" id="${cardId}-img" alt="Prenda" class="img-fit" loading="lazy">
+                <div class="category-pill-overlay banner-${displayCategory}">${categoryLabel}</div>
             `;
-            this.productImagesGrid.appendChild(container);
-        });
+        } else {
+            imgContainer.innerHTML = `
+                <div id="${cardId}-img-placeholder" class="no-image-placeholder">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+                <div class="category-pill-overlay banner-${displayCategory}">${categoryLabel}</div>
+            `;
+        }
+        
+        // Actualizar label de color
+        const label = document.getElementById(`${cardId}-color-label`);
+        if (label) label.textContent = variant.color;
 
-        // Show/Hide upload button based on limit
-        if (this.btnUploadImage) {
-            this.btnUploadImage.style.display = this.currentProductImages.length >= 3 ? 'none' : 'flex';
+        // Actualizar total stock
+        const stockEl = document.getElementById(`${cardId}-stock-total`);
+        if (stockEl) {
+            stockEl.textContent = variant.cantidad;
+            stockEl.style.color = this.getStockColor(variant.cantidad);
         }
 
-        // Attach listeners to remove buttons
-        document.querySelectorAll('.btn-remove-image').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                this.removeImage(index);
-            });
+        // Actualizar size pills
+        const sizesContainer = document.getElementById(`${cardId}-sizes`);
+        if (sizesContainer) {
+            sizesContainer.innerHTML = Object.keys(variant.stockPorTalla || {})
+                .filter(t => (parseInt(variant.stockPorTalla[t]) || 0) > 0)
+                .map(t => `<span class="size-pill" style="font-size: 9px; background: rgba(255,255,255,0.05); padding: 2px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">${t}</span>`)
+                .join('') || '<span style="font-size: 9px; opacity:0.4;">Sin stock</span>';
+        }
+
+        // Marcar círculo activo
+        card.querySelectorAll('.color-circle').forEach(c => {
+            c.style.border = '1px solid rgba(0,0,0,0.2)';
+            c.style.transform = 'scale(1)';
         });
+        circleEl.style.border = '2px solid #e63946';
+        circleEl.style.transform = 'scale(1.2)';
     }
 
-    removeImage(index) {
-        this.currentProductImages.splice(index, 1);
-        this.renderImagePreviews();
+    populateColorFilter() {
+        if (!this.filterColor) return;
+        const inventory = dataManager.dataCache.inventory || [];
+        const colors = new Set();
+        inventory.forEach(item => {
+            if (item.colores && Array.isArray(item.colores)) {
+                item.colores.forEach(v => { if (v.color) colors.add(v.color); });
+            } else if (item.color) {
+                colors.add(item.color);
+            }
+        });
+        const current = this.filterColor.value;
+        this.filterColor.innerHTML = '<option value="">Todos los colores</option>';
+        [...colors].sort().forEach(c => {
+            this.filterColor.innerHTML += `<option value="${c}" ${current === c ? 'selected' : ''}>${c}</option>`;
+        });
     }
 
     // --- MODAL DE ITEM ---
@@ -1143,45 +1281,32 @@ class UIController {
     showItemModal(item = null) {
         this.currentEditingId = item ? item.id : null;
         const title = document.getElementById('itemModalTitle');
-        this.currentProductImages = item && item.images ? [...item.images] : [];
 
         if (item) {
             title.textContent = 'Editar Prenda';
             document.getElementById('itemTipo').value = item.tipo;
-            document.getElementById('itemColor').value = item.color;
             document.getElementById('itemPrecio').value = item.precio;
             document.getElementById('itemCategoria').value = item.categoria;
 
-            // Poblara stock por talla
-            this.sizeStockInputs.forEach(input => {
-                const size = input.dataset.size;
-                input.value = item.stockPorTalla ? (item.stockPorTalla[size] || 0) : (item.talla === size ? item.cantidad : 0);
-            });
-
-            // Select category chip
-            const chip = document.querySelector(`.category-chip[data-color="${item.categoria}"]`);
-            if (chip) this.selectCategoryChip(chip);
+            if (item.colores && Array.isArray(item.colores)) {
+                this.colorVariants = item.colores.map(v => ({ ...v, stockPorTalla: { ...v.stockPorTalla } }));
+            } else {
+                this.colorVariants = [{ color: item.color || 'Único', image: (item.images && item.images[0]) || null, stockPorTalla: { ...item.stockPorTalla } }];
+            }
+            this.activeColorIdx = 0;
         } else {
             title.textContent = 'Nueva Prenda';
             document.getElementById('itemTipo').value = '';
-            document.getElementById('itemColor').value = '';
             document.getElementById('itemPrecio').value = '';
             document.getElementById('itemCategoria').value = 'remeras';
-
-            // Reset stock inputs
-            this.sizeStockInputs.forEach(input => input.value = '');
-
-            // Select first chip (Remeras)
-            const firstChip = document.querySelector('.category-chip');
-            if (firstChip) this.selectCategoryChip(firstChip);
+            this.colorVariants = [{ color: 'Negro', image: null, stockPorTalla: {} }];
+            this.activeColorIdx = 0;
         }
 
-        this.renderImagePreviews();
-
+        this.renderColorTabs();
+        this.loadActiveTabStock();
         this.closeAllModals();
         this.itemModal.style.display = 'flex';
-        this.itemModal.style.zIndex = '1010'; // Asegurar que esté al frente
-        this.itemModal.querySelector('.input-hours')?.focus();
     }
 
     closeItemModal() {
@@ -1196,48 +1321,34 @@ class UIController {
     }
 
     async saveItem() {
-        // Collect stock por talla
-        const stockPorTalla = {};
-        this.sizeStockInputs.forEach(input => {
-            const val = parseInt(input.value) || 0;
-            if (val > 0) stockPorTalla[input.dataset.size] = val;
-        });
+        this.saveCurrentTabStock(); // Guardar el stock de la pestaña actual antes de enviar
 
-        // Procesar el precio: eliminar puntos (separadores de miles) y reemplazar coma por punto (decimal)
         const precioInput = document.getElementById('itemPrecio').value.trim();
         const precioLimpio = precioInput.replace(/\./g, '').replace(',', '.');
         const precioNumerico = parseFloat(precioLimpio) || 0;
 
         const itemData = {
             tipo: document.getElementById('itemTipo').value.trim(),
-            color: document.getElementById('itemColor').value.trim(),
             precio: precioNumerico,
             categoria: document.getElementById('itemCategoria').value,
-            stockPorTalla: stockPorTalla,
-            images: this.currentProductImages
+            colores: this.colorVariants.filter(v => v.color.trim())
         };
 
-        if (!itemData.tipo || !itemData.color) {
-            alert('Por favor completa los campos obligatorios');
-            return;
+        if (!itemData.tipo) {
+            alert('Ingresa el tipo de prenda'); return;
         }
-
-        if (precioNumerico <= 0) {
-            alert('Por favor ingresa un precio válido');
-            return;
+        if (itemData.colores.length === 0) {
+            alert('Agrega al menos un color'); return;
         }
 
         if (this.currentEditingId) {
             await dataManager.updateItem(this.currentEditingId, itemData);
-            this.showNotification('Prenda actualizada');
         } else {
             await dataManager.addItem(itemData);
-            this.showNotification('Prenda agregada');
         }
 
         this.closeItemModal();
-        this.updateStats();
-        this.filterInventory(); // Refresh view
+        this.filterInventory();
     }
 
     async editItem(id) {
