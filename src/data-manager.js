@@ -43,8 +43,6 @@ class DataManager {
         this.cloudinaryUploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
     }
 
-    // --- AUTENTICACIÓN ---
-
     async login(username, token) {
         try {
             console.log('🔐 Intentando login con usuario:', username);
